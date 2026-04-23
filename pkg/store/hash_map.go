@@ -5,11 +5,19 @@ import (
 	"sync"
 )
 
+// HashMap is a thread-safe in-memory key-value store.
+
 type HashMap struct {
 	data  map[string]string
 	mutex sync.RWMutex
 }
 
+// NewHashMap Returns an instance of a HashMap with empty data map property
+func NewHashMap() (hashMap *HashMap) {
+	return &HashMap{data: make(map[string]string)}
+}
+
+// Get retrieves the value for a given key, blocking writes during the read.
 func (h *HashMap) Get(key string) (string, error) {
 	h.lockRead()
 	defer h.unlockRead()
@@ -23,9 +31,8 @@ func (h *HashMap) Get(key string) (string, error) {
 
 }
 
-func NewHashMap() (hashMap *HashMap) {
-	return &HashMap{data: make(map[string]string)}
-}
+// Set sets a key to a given value, blocks any reads or writes during this.
+
 func (h *HashMap) Set(key, value string) {
 	h.lockWrite()
 	defer h.unlockWrite()
@@ -33,6 +40,7 @@ func (h *HashMap) Set(key, value string) {
 	h.data[key] = value
 }
 
+// util functions only to be used within the class itself
 func (h *HashMap) lockRead() {
 	h.mutex.RLock()
 }
