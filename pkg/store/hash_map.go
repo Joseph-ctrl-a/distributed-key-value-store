@@ -19,8 +19,8 @@ func NewHashMap() (hashMap *HashMap) {
 
 // Get retrieves the value for a given key, blocking writes during the read.
 func (h *HashMap) Get(key string) (string, error) {
-	h.lockRead()
-	defer h.unlockRead()
+	h.lockReadAndWrite()
+	defer h.unlockReadAndWrite()
 	value, ok := h.data[key]
 
 	if !ok {
@@ -41,11 +41,11 @@ func (h *HashMap) Set(key, value string) {
 }
 
 // util functions only to be used within the class itself
-func (h *HashMap) lockRead() {
+func (h *HashMap) lockReadAndWrite() {
 	h.mutex.RLock()
 }
 
-func (h *HashMap) unlockRead() {
+func (h *HashMap) unlockReadAndWrite() {
 	h.mutex.RUnlock()
 }
 
