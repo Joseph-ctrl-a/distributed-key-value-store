@@ -19,8 +19,8 @@ func NewHashMap() (hashMap *HashMap) {
 
 // Get retrieves the value for a given key, blocking writes during the read.
 func (h *HashMap) Get(key string) (string, error) {
-	h.lockReadAndWrite()
-	defer h.unlockReadAndWrite()
+	h.lockWrites()
+	defer h.unlockWrites()
 	value, ok := h.data[key]
 
 	if !ok {
@@ -34,25 +34,40 @@ func (h *HashMap) Get(key string) (string, error) {
 // Set sets a key to a given value, blocks any reads or writes during this.
 
 func (h *HashMap) Set(key, value string) {
-	h.lockWrite()
-	defer h.unlockWrite()
+	h.lockReadAndWrite()
+	defer h.unlockReadAndWrite()
 
 	h.data[key] = value
 }
 
+func (h *HashMap) Delete(key string) {
+	h.lockReadAndWrite()
+
+	defer h.unlockReadAndWrite()
+
+	delete(h.data, key)
+}
+
+func (h *HashMap) Has(key string) bool {
+	h.lockWrites()
+	defer h.unlockWrites()
+	_, has := h.data[key]
+	return has
+}
+
 // util functions only to be used within the class itself
-func (h *HashMap) lockReadAndWrite() {
+func (h *HashMap) lockWrites() {
 	h.mutex.RLock()
 }
 
-func (h *HashMap) unlockReadAndWrite() {
+func (h *HashMap) unlockWrites() {
 	h.mutex.RUnlock()
 }
 
-func (h *HashMap) lockWrite() {
+func (h *HashMap) lockReadAndWrite() {
 	h.mutex.Lock()
 }
 
-func (h *HashMap) unlockWrite() {
+func (h *HashMap) unlockReadAndWrite() {
 	h.mutex.Unlock()
 }
