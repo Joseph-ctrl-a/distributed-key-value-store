@@ -5,12 +5,18 @@ import (
 	"sync"
 )
 
+// Wal defines how a WAL should look
 type Wal struct {
 	file  *os.File
 	mutex sync.RWMutex
 }
 
+// WriteMethodCall formats and writes any given method to the WAL, other writes are blocked during this.
 func (w *Wal) WriteMethodCall(entry *LogEntry) error {
+
+	w.mutex.RLock()
+	defer w.mutex.RUnlock()
+
 	log := entry.FormatEntry()
 
 	_, err := w.file.WriteString(log)
@@ -19,9 +25,12 @@ func (w *Wal) WriteMethodCall(entry *LogEntry) error {
 
 }
 
+// Closes the WAL
 func (w *Wal) Close() {
 	w.file.Close()
 }
+
+// Creates a new WAL
 func NewWal(filepath string) (*Wal, error) {
 	var file *os.File
 	var err error
