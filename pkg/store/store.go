@@ -5,4 +5,5 @@ type Store interface {
 	Get(key string) (string, error)
 	Set(key, value string)
 	Delete(key string)
+	Has(key string)
 }

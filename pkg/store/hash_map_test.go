@@ -54,3 +54,7 @@ func TestConcurrency(t *testing.T) {
 	}
 	wg.Wait()
 }
+
+func TestDelete(t *testing.T) {
+
+}
