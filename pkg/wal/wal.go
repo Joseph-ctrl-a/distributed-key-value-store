@@ -18,6 +18,10 @@ func (w *Wal) WriteMethodCall(entry *LogEntry) error {
 	return err
 
 }
+
+func (w *Wal) Close() {
+	w.file.Close()
+}
 func NewWal(filepath string) (*Wal, error) {
 	var file *os.File
 	var err error

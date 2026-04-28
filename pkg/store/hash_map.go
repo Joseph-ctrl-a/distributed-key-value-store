@@ -2,7 +2,6 @@ package store
 
 import (
 	"Distributed_Key_Value_Store/pkg/wal"
-	"errors"
 	"sync"
 )
 
@@ -20,7 +19,7 @@ func NewHashMap(wal *wal.Wal) (hashMap *HashMap) {
 }
 
 // Get retrieves the value for a given key, blocking writes during the read.
-func (h *HashMap) Get(key string) (string, error) {
+func (h *HashMap) Get(key string) (string, bool) {
 
 	h.mutex.RLock()
 	defer h.mutex.RUnlock()
@@ -28,10 +27,10 @@ func (h *HashMap) Get(key string) (string, error) {
 	value, ok := h.data[key]
 
 	if !ok {
-		return "", errors.New("Could not find key")
+		return "", false
 	}
 
-	return value, nil
+	return value, true
 
 }
 
@@ -50,7 +49,7 @@ func (h *HashMap) Set(key, value string) {
 
 // Delete an entry with a given key, blocks any reads or writes during this.
 func (h *HashMap) Delete(key string) {
-	entry := wal.NewLogEntry("Delete", []string{key})
+	entry := wal.NewLogEntry("DELETE", []string{key})
 	h.wal.WriteMethodCall(entry)
 	h.mutex.Lock()
 
