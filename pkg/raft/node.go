@@ -3,7 +3,10 @@ package raft
 import (
 	"Distributed_Key_Value_Store/pkg/transport"
 	"Distributed_Key_Value_Store/pkg/wal"
+	"context"
 	"flag"
+	"log"
+	"net"
 	"strings"
 	"time"
 
@@ -11,6 +14,7 @@ import (
 )
 
 type Node struct {
+	transport.UnimplementedRaftServer
 	id            string
 	role          string
 	currentLeader string
@@ -29,16 +33,26 @@ func NewNode(wal *wal.Wal) (*Node, error) {
 
 	flag.Parse()
 
-	peerList := strings.Split(*peers, ",")
+	node := &Node{id: *id, peers: strings.Split(*peers, ","), role: "follower", currentLeader: "", votedFor: "", log: wal, electionTimer: *time.NewTimer(time.Millisecond * 150)}
 
-	node := &Node{id: *id, peers: peerList, role: "follower", currentLeader: "", votedFor: "", log: wal, electionTimer: *time.NewTimer(time.Millisecond * 150)}
-
-	err := node.createConnections()
+	err := node.init()
 	if err != nil {
 		return nil, err
 	}
-	node.startElectionTimer()
 	return node, nil
+}
+func (n *Node) init() error {
+	err := n.createConnections()
+	if err != nil {
+		return err
+	}
+
+	err = n.startServer()
+	if err != nil {
+		return err
+	}
+	n.startElectionTimer()
+	return nil
 }
 
 func (n *Node) createConnections() error {
@@ -52,6 +66,33 @@ func (n *Node) createConnections() error {
 	}
 	return nil
 }
+
+func (n *Node) startServer() error {
+	listen, err := net.Listen("tcp", n.id)
+
+	if err != nil {
+		return err
+	}
+	server := grpc.NewServer()
+	transport.RegisterRaftServer(server, n)
+
+	go func() {
+		err := server.Serve(listen)
+		if err != nil {
+			log.Printf("Server error: %v", err)
+		}
+	}()
+	return nil
+}
+
+func (n *Node) RequestVote(c context.Context, req *transport.RequestVoteRequest) (res *transport.RequestVoteResponse, err error) {
+	return
+}
+
+func (n *Node) AppendEntries(c context.Context, req *transport.AppendEntriesRequest) (response *transport.AppendEntriesResponse, err error) {
+	return
+}
+
 func (n *Node) startElection() {
 	defer n.startElectionTimer()
 
