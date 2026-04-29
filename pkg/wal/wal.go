@@ -37,7 +37,7 @@ func (w *Wal) Close() {
 	w.file.Close()
 }
 
-func (w *Wal) LastLogTerm() (int, error) {
+func (w *Wal) LastLogTerm() (int32, error) {
 	if w.lastEntry == "" {
 		return 0, nil
 	}
@@ -46,28 +46,19 @@ func (w *Wal) LastLogTerm() (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	return term, nil
+	return int32(term), nil
 }
 
-func (w *Wal) LastLogIndex() int {
-	return w.lineCount
+func (w *Wal) LastLogIndex() int32 {
+	return int32(w.lineCount)
 }
 
 // Creates a new WAL
 func NewWal(filepath string) (*Wal, error) {
-	var file *os.File
-	var err error
-	if !fileExists(filepath) {
-		file, err = os.Create(filepath)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		file, err = os.OpenFile(filepath, os.O_APPEND|os.O_WRONLY, 0644)
-		if err != nil {
-			return nil, err
-		}
-	}
 
+	file, err := os.OpenFile(filepath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
+	if err != nil {
+		return nil, err
+	}
 	return &Wal{file: file}, nil
 }

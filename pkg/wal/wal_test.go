@@ -55,7 +55,7 @@ func TestLastLogTerm(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got != expected {
+	if got != int32(expected) {
 		t.Errorf("expected lastLogTerm to be %d instead got %d", expected, got)
 	}
 	t.Cleanup(func() {
@@ -74,7 +74,7 @@ func TestLastLogIndex(t *testing.T) {
 	got := w.LastLogIndex()
 	expected := 1
 
-	if got != expected {
+	if got != int32(expected) {
 		t.Errorf("expected LastLogIndex to return %d instead got %d", expected, got)
 	}
 	t.Cleanup(func() {
