@@ -5,7 +5,7 @@ import (
 	"sync"
 )
 
-// Wal defines how a WAL should look
+// Wal defines how a Wal should look
 type Wal struct {
 	file  *os.File
 	mutex sync.RWMutex
