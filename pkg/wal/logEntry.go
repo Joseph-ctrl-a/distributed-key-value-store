@@ -6,6 +6,7 @@ import "strings"
 type LogEntry struct {
 	MethodName string
 	Params     []string
+	Term       int
 }
 
 // NewLogEntry Creates a new LogEntry returning its memory address

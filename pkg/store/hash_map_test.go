@@ -1,25 +1,13 @@
 package store
 
 import (
-	"Distributed_Key_Value_Store/pkg/wal"
 	"fmt"
 	"sync"
 	"testing"
 )
 
-func newTestHashMap(t *testing.T) *HashMap {
-
-	w, err := wal.NewWal(t.TempDir() + "/test.log")
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() {
-		w.Close()
-	})
-	return NewHashMap(w)
-}
 func TestSetAndGet(t *testing.T) {
-	hashmap := newTestHashMap(t)
+	hashmap := NewHashMap()
 
 	hashmap.Set("name", "joseph")
 
@@ -36,7 +24,7 @@ func TestSetAndGet(t *testing.T) {
 }
 
 func TestMissingKey(t *testing.T) {
-	hashmap := newTestHashMap(t)
+	hashmap := NewHashMap()
 
 	_, has := hashmap.Get("name")
 
@@ -57,7 +45,7 @@ func TestConcurrency(t *testing.T) {
 		hashmap.Get(key)
 	}
 
-	hashmap := newTestHashMap(t)
+	hashmap := NewHashMap()
 	var wg sync.WaitGroup
 
 	for i := range 10000 {
@@ -68,7 +56,7 @@ func TestConcurrency(t *testing.T) {
 }
 
 func TestDelete(t *testing.T) {
-	hashmap := newTestHashMap(t)
+	hashmap := NewHashMap()
 
 	hashmap.Set("name", "joseph")
 
@@ -83,7 +71,7 @@ func TestDelete(t *testing.T) {
 }
 
 func TestHas(t *testing.T) {
-	hashmap := newTestHashMap(t)
+	hashmap := NewHashMap()
 
 	hashmap.Set("name", "joseph")
 
