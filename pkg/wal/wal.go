@@ -18,8 +18,8 @@ type Wal struct {
 // WriteMethodCall formats and writes any given method to the WAL, other writes are blocked during this.
 func (w *Wal) WriteMethodCall(entry *LogEntry) (err error) {
 
-	w.mutex.RLock()
-	defer w.mutex.RUnlock()
+	w.mutex.Lock()
+	defer w.mutex.Unlock()
 
 	log := entry.FormatEntry()
 
@@ -38,6 +38,9 @@ func (w *Wal) Close() {
 }
 
 func (w *Wal) LastLogTerm() (int, error) {
+	if w.lastEntry == "" {
+		return 0, nil
+	}
 	lastTerm := strings.Split(w.lastEntry, ":")[2]
 	term, err := strconv.Atoi(strings.TrimSpace(lastTerm))
 	if err != nil {
