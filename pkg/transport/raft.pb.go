@@ -25,6 +25,8 @@ type RequestVoteRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Term          int32                  `protobuf:"varint,1,opt,name=term,proto3" json:"term,omitempty"`
 	CandidateId   string                 `protobuf:"bytes,2,opt,name=candidateId,proto3" json:"candidateId,omitempty"`
+	LastLogIndex  int32                  `protobuf:"varint,3,opt,name=lastLogIndex,proto3" json:"lastLogIndex,omitempty"`
+	LastLogTerm   int32                  `protobuf:"varint,4,opt,name=lastLogTerm,proto3" json:"lastLogTerm,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -71,6 +73,20 @@ func (x *RequestVoteRequest) GetCandidateId() string {
 		return x.CandidateId
 	}
 	return ""
+}
+
+func (x *RequestVoteRequest) GetLastLogIndex() int32 {
+	if x != nil {
+		return x.LastLogIndex
+	}
+	return 0
+}
+
+func (x *RequestVoteRequest) GetLastLogTerm() int32 {
+	if x != nil {
+		return x.LastLogTerm
+	}
+	return 0
 }
 
 type RequestVoteResponse struct {
@@ -130,6 +146,9 @@ type AppendEntriesRequest struct {
 	Term          int32                  `protobuf:"varint,1,opt,name=term,proto3" json:"term,omitempty"`
 	LeaderId      string                 `protobuf:"bytes,2,opt,name=leaderId,proto3" json:"leaderId,omitempty"`
 	Entries       []string               `protobuf:"bytes,3,rep,name=entries,proto3" json:"entries,omitempty"`
+	PrevLogIndex  int32                  `protobuf:"varint,4,opt,name=prevLogIndex,proto3" json:"prevLogIndex,omitempty"`
+	PrevLogTerm   int32                  `protobuf:"varint,5,opt,name=prevLogTerm,proto3" json:"prevLogTerm,omitempty"`
+	LeaderCommit  int32                  `protobuf:"varint,6,opt,name=leaderCommit,proto3" json:"leaderCommit,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -183,6 +202,27 @@ func (x *AppendEntriesRequest) GetEntries() []string {
 		return x.Entries
 	}
 	return nil
+}
+
+func (x *AppendEntriesRequest) GetPrevLogIndex() int32 {
+	if x != nil {
+		return x.PrevLogIndex
+	}
+	return 0
+}
+
+func (x *AppendEntriesRequest) GetPrevLogTerm() int32 {
+	if x != nil {
+		return x.PrevLogTerm
+	}
+	return 0
+}
+
+func (x *AppendEntriesRequest) GetLeaderCommit() int32 {
+	if x != nil {
+		return x.LeaderCommit
+	}
+	return 0
 }
 
 type AppendEntriesResponse struct {
@@ -241,17 +281,22 @@ var File_pkg_transport_raft_proto protoreflect.FileDescriptor
 
 const file_pkg_transport_raft_proto_rawDesc = "" +
 	"\n" +
-	"\x18pkg/transport/raft.proto\x12\ttransport\"J\n" +
+	"\x18pkg/transport/raft.proto\x12\ttransport\"\x90\x01\n" +
 	"\x12RequestVoteRequest\x12\x12\n" +
 	"\x04term\x18\x01 \x01(\x05R\x04term\x12 \n" +
-	"\vcandidateId\x18\x02 \x01(\tR\vcandidateId\"K\n" +
+	"\vcandidateId\x18\x02 \x01(\tR\vcandidateId\x12\"\n" +
+	"\flastLogIndex\x18\x03 \x01(\x05R\flastLogIndex\x12 \n" +
+	"\vlastLogTerm\x18\x04 \x01(\x05R\vlastLogTerm\"K\n" +
 	"\x13RequestVoteResponse\x12\x12\n" +
 	"\x04term\x18\x01 \x01(\x05R\x04term\x12 \n" +
-	"\vvoteGranted\x18\x02 \x01(\bR\vvoteGranted\"`\n" +
+	"\vvoteGranted\x18\x02 \x01(\bR\vvoteGranted\"\xca\x01\n" +
 	"\x14AppendEntriesRequest\x12\x12\n" +
 	"\x04term\x18\x01 \x01(\x05R\x04term\x12\x1a\n" +
 	"\bleaderId\x18\x02 \x01(\tR\bleaderId\x12\x18\n" +
-	"\aentries\x18\x03 \x03(\tR\aentries\"I\n" +
+	"\aentries\x18\x03 \x03(\tR\aentries\x12\"\n" +
+	"\fprevLogIndex\x18\x04 \x01(\x05R\fprevLogIndex\x12 \n" +
+	"\vprevLogTerm\x18\x05 \x01(\x05R\vprevLogTerm\x12\"\n" +
+	"\fleaderCommit\x18\x06 \x01(\x05R\fleaderCommit\"I\n" +
 	"\x15AppendEntriesResponse\x12\x12\n" +
 	"\x04term\x18\x01 \x01(\x05R\x04term\x12\x1c\n" +
 	"\treadEntry\x18\x02 \x01(\bR\treadEntry2\xa8\x01\n" +

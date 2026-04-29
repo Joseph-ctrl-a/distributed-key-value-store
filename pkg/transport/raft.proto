@@ -6,6 +6,8 @@ package transport;
 message RequestVoteRequest {
   int32 term = 1;
   string candidateId = 2;
+  int32 lastLogIndex = 3;
+  int32 lastLogTerm = 4;
 }
 
 message RequestVoteResponse {
@@ -17,6 +19,9 @@ message AppendEntriesRequest {
   int32 term = 1;
   string leaderId = 2;
   repeated string entries = 3;
+  int32 prevLogIndex = 4;
+  int32 prevLogTerm = 5;
+  int32 leaderCommit = 6;
 }
 
 message AppendEntriesResponse {

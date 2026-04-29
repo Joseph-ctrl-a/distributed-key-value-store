@@ -90,7 +90,7 @@ func (n *Node) RequestVote(c context.Context, req *transport.RequestVoteRequest)
 }
 
 func (n *Node) AppendEntries(c context.Context, req *transport.AppendEntriesRequest) (response *transport.AppendEntriesResponse, err error) {
-	return
+
 }
 
 func (n *Node) startElection() {
