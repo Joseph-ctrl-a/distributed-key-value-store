@@ -21,7 +21,7 @@ type Node struct {
 	electionTimer   time.Timer
 	clients         map[string]transport.RaftClient
 	persistentState *PersistentState
-	mutex           sync.Mutex
+	mutex           sync.RWMutex
 }
 
 // NewNode defines how a Node should look
@@ -32,7 +32,7 @@ func NewNode(wal *wal.Wal) (*Node, error) {
 	peers := flag.String("peers", "", "comma separated list of peer addresses")
 	flag.Parse()
 
-	node := &Node{id: *id, peers: strings.Split(*peers, ","), role: "follower", currentLeader: "", votedFor: "", log: wal, electionTimer: *time.NewTimer(time.Millisecond * 150)}
+	node := &Node{id: *id, peers: strings.Split(*peers, ","), role: "follower", currentLeader: "", votedFor: "", log: wal}
 
 	err := node.init()
 	if err != nil {
@@ -59,6 +59,9 @@ func (n *Node) init() error {
 		return err
 	}
 	n.persistentState = state
+
+	n.electionTimer = *time.NewTimer(time.Millisecond * time.Duration(n.RandomElectionTime()))
+
 	return nil
 
 }
