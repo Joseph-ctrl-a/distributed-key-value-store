@@ -39,7 +39,10 @@ func (n *Node) startElection() error {
 		n.sendVote(votes, peerAddress, lastLogIndex, lastLogTerm)
 	}
 	n.mutex.Unlock()
-	votesReceived := n.tallyVotes(votes)
+	votesReceived, err := n.tallyVotes(votes)
+	if err != nil {
+		return err
+	}
 	n.mutex.Lock()
 	if votesReceived > len(n.peers)/2 && n.role == "candidate" {
 		n.role = "leader"
@@ -49,7 +52,7 @@ func (n *Node) startElection() error {
 	return nil
 }
 
-func (n *Node) tallyVotes(channel chan *transport.RequestVoteResponse) int {
+func (n *Node) tallyVotes(channel chan *transport.RequestVoteResponse) (int, error) {
 
 	votesReceived := 0
 	for range len(n.peers) {
@@ -60,16 +63,17 @@ func (n *Node) tallyVotes(channel chan *transport.RequestVoteResponse) int {
 			continue
 		}
 		if res.Term > n.currentTerm {
-			n.stepDown(res.Term)
+			err := n.stepDown(res.Term)
 			n.mutex.Unlock()
-			return 0
+
+			return 0, err
 		}
 		n.mutex.Unlock()
 		if res.VoteGranted {
 			votesReceived++
 		}
 	}
-	return votesReceived
+	return votesReceived, nil
 }
 func (n *Node) sendVote(channel chan *transport.RequestVoteResponse, address string, logIndex int32, logTerm int32) {
 	ctx, cancel := context.WithTimeout(context.Background(), 75*time.Millisecond)

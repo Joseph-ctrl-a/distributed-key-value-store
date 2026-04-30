@@ -228,7 +228,7 @@ func (x *AppendEntriesRequest) GetLeaderCommit() int32 {
 type AppendEntriesResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Term          int32                  `protobuf:"varint,1,opt,name=term,proto3" json:"term,omitempty"`
-	ReadEntry     bool                   `protobuf:"varint,2,opt,name=readEntry,proto3" json:"readEntry,omitempty"`
+	Success       bool                   `protobuf:"varint,2,opt,name=success,proto3" json:"success,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -270,9 +270,9 @@ func (x *AppendEntriesResponse) GetTerm() int32 {
 	return 0
 }
 
-func (x *AppendEntriesResponse) GetReadEntry() bool {
+func (x *AppendEntriesResponse) GetSuccess() bool {
 	if x != nil {
-		return x.ReadEntry
+		return x.Success
 	}
 	return false
 }
@@ -296,10 +296,10 @@ const file_pkg_transport_raft_proto_rawDesc = "" +
 	"\aentries\x18\x03 \x03(\tR\aentries\x12\"\n" +
 	"\fprevLogIndex\x18\x04 \x01(\x05R\fprevLogIndex\x12 \n" +
 	"\vprevLogTerm\x18\x05 \x01(\x05R\vprevLogTerm\x12\"\n" +
-	"\fleaderCommit\x18\x06 \x01(\x05R\fleaderCommit\"I\n" +
+	"\fleaderCommit\x18\x06 \x01(\x05R\fleaderCommit\"E\n" +
 	"\x15AppendEntriesResponse\x12\x12\n" +
-	"\x04term\x18\x01 \x01(\x05R\x04term\x12\x1c\n" +
-	"\treadEntry\x18\x02 \x01(\bR\treadEntry2\xa8\x01\n" +
+	"\x04term\x18\x01 \x01(\x05R\x04term\x12\x18\n" +
+	"\asuccess\x18\x02 \x01(\bR\asuccess2\xa8\x01\n" +
 	"\x04Raft\x12L\n" +
 	"\vRequestVote\x12\x1d.transport.RequestVoteRequest\x1a\x1e.transport.RequestVoteResponse\x12R\n" +
 	"\rAppendEntries\x12\x1f.transport.AppendEntriesRequest\x1a .transport.AppendEntriesResponseB\x11Z\x0f./pkg/transportb\x06proto3"

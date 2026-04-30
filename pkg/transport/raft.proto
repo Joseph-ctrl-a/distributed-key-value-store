@@ -26,7 +26,7 @@ message AppendEntriesRequest {
 
 message AppendEntriesResponse {
   int32 term = 1;
-  bool readEntry = 2;
+  bool success = 2;
 }
 
 service Raft {

@@ -3,8 +3,8 @@
 ## Election
 
 - [ DONE ] Fix remaining `RequestVote` gaps (role update, leader reset, election timer reset on vote grant, error handling in `voteForCandidate`)
-- [ DOING n] `startElection` — become candidate, fan out `RequestVote` RPCs, collect majority, become leader
-- [ ] Reset `votedFor` between elections (new term)
+- [ DONE ] `startElection` — become candidate, fan out `RequestVote` RPCs, collect majority, become leader
+- [DONE ] Reset `votedFor` between elections (new term)
 
 ## Replication
 
