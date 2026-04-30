@@ -5,6 +5,7 @@ import (
 	"context"
 )
 
+// RequestVote handles an incoming vote request from a candidate, granting a vote if the candidate's log is up-to-date and the node hasn't already voted this term.
 func (n *Node) RequestVote(c context.Context, req *transport.RequestVoteRequest) (res *transport.RequestVoteResponse, err error) {
 	n.mutex.Lock()
 	defer n.mutex.Unlock()
@@ -29,21 +30,21 @@ func (n *Node) RequestVote(c context.Context, req *transport.RequestVoteRequest)
 	if n.votedFor == req.CandidateId {
 		err = n.voteForCandidate(req, res)
 		if err != nil {
-			return nil, err
+			return &transport.RequestVoteResponse{}, err
 		}
 		return
 	}
 	if n.hasVoted() {
 		res.VoteGranted = false
 		res.Term = n.currentTerm
-		return
+		return res, err
 	}
 
 	if lastLogTerm == req.LastLogTerm {
 		if req.LastLogIndex >= n.log.LastLogIndex() {
 			err = n.voteForCandidate(req, res)
 			if err != nil {
-				return nil, err
+				return &transport.RequestVoteResponse{}, err
 			}
 		} else {
 			res.VoteGranted = false
@@ -52,7 +53,7 @@ func (n *Node) RequestVote(c context.Context, req *transport.RequestVoteRequest)
 	} else if lastLogTerm < req.LastLogTerm {
 		err = n.voteForCandidate(req, res)
 		if err != nil {
-			return nil, err
+			return &transport.RequestVoteResponse{}, err
 		}
 	} else {
 		res.VoteGranted = false
@@ -62,6 +63,7 @@ func (n *Node) RequestVote(c context.Context, req *transport.RequestVoteRequest)
 	return
 }
 
+// voteForCandidate grants the vote, updates node state, and persists votedFor to disk.
 func (n *Node) voteForCandidate(req *transport.RequestVoteRequest, res *transport.RequestVoteResponse) error {
 	res.VoteGranted = true
 	res.Term = n.currentTerm
@@ -73,6 +75,7 @@ func (n *Node) voteForCandidate(req *transport.RequestVoteRequest, res *transpor
 	return err
 }
 
+// hasVoted returns true if the node has already cast a vote this term.
 func (n *Node) hasVoted() bool {
 	return n.votedFor != ""
 }

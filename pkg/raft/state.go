@@ -14,6 +14,7 @@ type PersistentState struct {
 	file        *os.File
 }
 
+// NewPersistentState loads existing state from disk if available, otherwise creates a fresh state file.
 func NewPersistentState() (state *PersistentState, err error) {
 
 	var file *os.File
@@ -48,6 +49,7 @@ func NewPersistentState() (state *PersistentState, err error) {
 
 }
 
+// writeCurrentState updates the in-memory state and atomically overwrites the state file on disk.
 func (p *PersistentState) writeCurrentState(term int32, votedFor string) (err error) {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
@@ -63,6 +65,7 @@ func (p *PersistentState) writeCurrentState(term int32, votedFor string) (err er
 	return err
 }
 
+// updateState updates the in-memory term and votedFor fields.
 func (p *PersistentState) updateState(term int32, votedFor string) {
 	p.CurrentTerm = term
 	p.VotedFor = votedFor

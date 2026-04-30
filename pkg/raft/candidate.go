@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+// startElection increments the term, votes for itself, and sends RequestVote RPCs to all peers concurrently.
 func (n *Node) startElection() error {
 	n.mutex.Lock()
 
@@ -44,7 +45,7 @@ func (n *Node) startElection() error {
 		return err
 	}
 	n.mutex.Lock()
-	if votesReceived > len(n.peers)/2 && n.role == "candidate" {
+	if votesReceived >= len(n.peers)/2 && n.role == "candidate" {
 		n.role = "leader"
 		n.currentLeader = n.id
 	}
@@ -52,6 +53,7 @@ func (n *Node) startElection() error {
 	return nil
 }
 
+// tallyVotes reads vote responses from the channel, stepping down if a higher term is seen.
 func (n *Node) tallyVotes(channel chan *transport.RequestVoteResponse) (int, error) {
 
 	votesReceived := 0
@@ -75,6 +77,8 @@ func (n *Node) tallyVotes(channel chan *transport.RequestVoteResponse) (int, err
 	}
 	return votesReceived, nil
 }
+
+// sendVote sends a RequestVote RPC to a single peer in a goroutine and sends the response to the channel.
 func (n *Node) sendVote(channel chan *transport.RequestVoteResponse, address string, logIndex int32, logTerm int32) {
 	ctx, cancel := context.WithTimeout(context.Background(), 75*time.Millisecond)
 
@@ -91,6 +95,7 @@ func (n *Node) sendVote(channel chan *transport.RequestVoteResponse, address str
 	}()
 }
 
+// stepDown reverts the node to follower, updates the term, clears votedFor, and persists the state.
 func (n *Node) stepDown(newTerm int32) error {
 
 	n.currentTerm = newTerm
@@ -103,6 +108,8 @@ func (n *Node) stepDown(newTerm int32) error {
 	n.resetElectionTimer()
 	return nil
 }
+
+// startElectionTimer waits for the election timer to fire then starts an election.
 func (n *Node) startElectionTimer() {
 	go func() {
 
@@ -113,10 +120,12 @@ func (n *Node) startElectionTimer() {
 
 }
 
+// resetElectionTimer resets the election timer to a new random duration between 150-300ms.
 func (n *Node) resetElectionTimer() {
 	n.electionTimer.Reset(time.Millisecond * time.Duration(n.RandomElectionTime()))
 }
 
+// RandomElectionTime returns a random election timeout between 150 and 300 milliseconds.
 func (n *Node) RandomElectionTime() int {
 	return (rand.Intn(150) + 150)
 }

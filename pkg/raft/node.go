@@ -1,6 +1,7 @@
 package raft
 
 import (
+	"Distributed_Key_Value_Store/pkg/store"
 	"Distributed_Key_Value_Store/pkg/transport"
 	"Distributed_Key_Value_Store/pkg/wal"
 	"flag"
@@ -18,10 +19,13 @@ type Node struct {
 	votedFor        string
 	peers           []string
 	log             *wal.Wal
-	electionTimer   time.Timer
+	electionTimer   *time.Timer
 	clients         map[string]transport.RaftClient
 	persistentState *PersistentState
 	mutex           sync.RWMutex
+	commitIndex     int32
+	store           *store.HashMap
+	lastApplied     int32
 }
 
 // NewNode defines how a Node should look
@@ -32,7 +36,7 @@ func NewNode(wal *wal.Wal) (*Node, error) {
 	peers := flag.String("peers", "", "comma separated list of peer addresses")
 	flag.Parse()
 
-	node := &Node{id: *id, peers: strings.Split(*peers, ","), role: "follower", currentLeader: "", votedFor: "", log: wal}
+	node := &Node{id: *id, peers: strings.Split(*peers, ","), role: "follower", currentLeader: "", votedFor: "", log: wal, commitIndex: 0}
 
 	err := node.init()
 	if err != nil {
@@ -41,6 +45,7 @@ func NewNode(wal *wal.Wal) (*Node, error) {
 	return node, nil
 }
 
+// init sets up peer connections, starts the gRPC server, election timer, and loads persistent state.
 func (n *Node) init() error {
 	err := n.createConnections()
 	if err != nil {
@@ -60,8 +65,9 @@ func (n *Node) init() error {
 	}
 	n.persistentState = state
 
-	n.electionTimer = *time.NewTimer(time.Millisecond * time.Duration(n.RandomElectionTime()))
+	n.electionTimer = time.NewTimer(time.Millisecond * time.Duration(n.RandomElectionTime()))
 
+	n.store = store.NewHashMap()
 	return nil
 
 }
