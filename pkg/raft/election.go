@@ -3,7 +3,6 @@ package raft
 import (
 	"Distributed_Key_Value_Store/pkg/transport"
 	"context"
-	"time"
 )
 
 func (n *Node) RequestVote(c context.Context, req *transport.RequestVoteRequest) (res *transport.RequestVoteResponse, err error) {
@@ -16,6 +15,8 @@ func (n *Node) RequestVote(c context.Context, req *transport.RequestVoteRequest)
 		return
 
 	} else if req.Term > n.currentTerm {
+		n.currentLeader = ""
+		n.role = "follower"
 		n.currentTerm = req.Term
 	}
 
@@ -26,7 +27,10 @@ func (n *Node) RequestVote(c context.Context, req *transport.RequestVoteRequest)
 	}
 
 	if n.votedFor == req.CandidateId {
-		n.voteForCandidate(req, res)
+		err = n.voteForCandidate(req, res)
+		if err != nil {
+			return nil, err
+		}
 		return
 	}
 	if n.hasVoted() {
@@ -37,13 +41,19 @@ func (n *Node) RequestVote(c context.Context, req *transport.RequestVoteRequest)
 
 	if lastLogTerm == req.LastLogTerm {
 		if req.LastLogIndex >= n.log.LastLogIndex() {
-			n.voteForCandidate(req, res)
+			err = n.voteForCandidate(req, res)
+			if err != nil {
+				return nil, err
+			}
 		} else {
 			res.VoteGranted = false
 			res.Term = n.currentTerm
 		}
 	} else if lastLogTerm < req.LastLogTerm {
-		n.voteForCandidate(req, res)
+		err = n.voteForCandidate(req, res)
+		if err != nil {
+			return nil, err
+		}
 	} else {
 		res.VoteGranted = false
 		res.Term = n.currentTerm
@@ -56,7 +66,8 @@ func (n *Node) voteForCandidate(req *transport.RequestVoteRequest, res *transpor
 	res.VoteGranted = true
 	res.Term = n.currentTerm
 	n.votedFor = req.CandidateId
-
+	n.role = "follower"
+	n.resetElectionTimer()
 	err := n.persistentState.writeCurrentState(n.currentTerm, n.votedFor)
 
 	return err
@@ -64,23 +75,4 @@ func (n *Node) voteForCandidate(req *transport.RequestVoteRequest, res *transpor
 
 func (n *Node) hasVoted() bool {
 	return n.votedFor != ""
-}
-func (n *Node) startElection() {
-	defer n.startElectionTimer()
-
-}
-
-func (n *Node) startElectionTimer() {
-	go func() {
-		defer n.resetElectionTimer()
-
-		<-n.electionTimer.C
-
-		n.startElection()
-	}()
-
-}
-
-func (n *Node) resetElectionTimer() {
-	defer n.electionTimer.Reset(time.Millisecond * 150)
 }
