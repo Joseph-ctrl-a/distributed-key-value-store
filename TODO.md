@@ -8,7 +8,7 @@
 
 ## Replication
 
-- [ ] `AppendEntries` — heartbeat + log replication handler
+- [ DONE ] `AppendEntries` — heartbeat + log replication handler
 - [ ] Leader sending entries to followers
 - [ ] Commit index tracking
 - [ ] Apply committed entries to the hashmap
