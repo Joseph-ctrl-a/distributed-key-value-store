@@ -65,7 +65,7 @@ func (n *Node) init() error {
 	}
 	n.persistentState = state
 
-	n.electionTimer = time.NewTimer(time.Millisecond * time.Duration(n.RandomElectionTime()))
+	n.electionTimer = time.NewTimer(time.Millisecond * time.Duration(n.RandomTime(150, 150)))
 
 	n.store = store.NewHashMap()
 	return nil

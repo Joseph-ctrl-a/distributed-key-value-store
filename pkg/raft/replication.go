@@ -18,7 +18,7 @@ func (n *Node) AppendEntries(c context.Context, req *transport.AppendEntriesRequ
 
 }
 
-// handleHeartBeat processes a heartbeat from the leader, stepping down if a higher term is seen and resetting the election timer.
+// HeartBeat processes a heartbeat from the leader, stepping down if a higher term is seen and resetting the election timer.
 func (n *Node) handleHeartBeat(req *transport.AppendEntriesRequest) (res *transport.AppendEntriesResponse, err error) {
 	n.mutex.Lock()
 	res = &transport.AppendEntriesResponse{}
@@ -122,6 +122,7 @@ func (n *Node) handleEntry(req *transport.AppendEntriesRequest) (res *transport.
 	return Success(n.currentTerm)
 }
 
+// applyEntry will apply an entry to the hashmap
 func (n *Node) applyEntry(entry string) error {
 	entryParsed, err := wal.Parse(entry)
 	if err != nil {
