@@ -45,9 +45,11 @@ func (n *Node) startElection() error {
 		return err
 	}
 	n.mutex.Lock()
-	if votesReceived >= len(n.peers)/2 && n.role == "candidate" {
+	if votesReceived > (len(n.peers)/2)+1 && n.role == "candidate" {
 		n.role = "leader"
 		n.currentLeader = n.id
+
+		go n.handleHeartBeatTimer()
 	}
 	n.mutex.Unlock()
 	return nil
@@ -56,7 +58,7 @@ func (n *Node) startElection() error {
 // tallyVotes reads vote responses from the channel, stepping down if a higher term is seen.
 func (n *Node) tallyVotes(channel chan *transport.RequestVoteResponse) (int, error) {
 
-	votesReceived := 0
+	votesReceived := 1
 	for range len(n.peers) {
 		res := <-channel
 		n.mutex.Lock()

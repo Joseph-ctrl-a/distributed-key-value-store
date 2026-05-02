@@ -31,8 +31,7 @@ func (n *Node) sendHeartBeats(channel chan *transport.AppendEntriesResponse, c c
 }
 
 // handleHeartBeatTimer handles when to start / stop sending heartbeats & what to do with them
-func (n *Node) handleHeartBeatTimer(req *transport.AppendEntriesRequest) error {
-
+func (n *Node) handleHeartBeatTimer() error {
 	ticker := time.NewTicker(50 * time.Millisecond)
 	defer ticker.Stop()
 
@@ -45,6 +44,24 @@ func (n *Node) handleHeartBeatTimer(req *transport.AppendEntriesRequest) error {
 		}
 		n.mutex.RUnlock()
 		<-ticker.C
+		n.mutex.Lock()
+		prevLogTerm, err := n.log.LastLogTerm()
+		if err != nil {
+			n.mutex.RUnlock()
+			return err
+		}
+
+		req := &transport.AppendEntriesRequest{
+			Term:         n.currentTerm,
+			LeaderId:     n.id,
+			Entries:      []string{},
+			PrevLogIndex: n.log.LastLogIndex(),
+			LeaderCommit: n.commitIndex,
+			PrevLogTerm:  prevLogTerm,
+		}
+
+		n.mutex.RUnlock()
+
 		ctx, cancel := context.WithTimeout(context.Background(), 75*time.Millisecond)
 		n.sendHeartBeats(channel, ctx, req)
 		responses := n.collectHeartBeatResponses(channel)
@@ -72,15 +89,6 @@ func (n *Node) tallyHeartBeats(responses []*transport.AppendEntriesResponse) (r 
 			n.mutex.Unlock()
 			return
 		}
-		if res.Success {
-			r.count++
-		}
-	}
-	majority := (len(n.peers)+1)/2 + 1
-	if r.count < majority {
-		n.mutex.Lock()
-		r.err = n.stepDown(n.currentTerm)
-		n.mutex.Unlock()
 	}
 	return r
 }
