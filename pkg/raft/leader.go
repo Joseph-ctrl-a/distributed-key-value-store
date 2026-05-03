@@ -44,7 +44,7 @@ func (n *Node) handleHeartBeatTimer() error {
 		}
 		n.mutex.RUnlock()
 		<-ticker.C
-		n.mutex.Lock()
+		n.mutex.RLock()
 		prevLogTerm, err := n.log.LastLogTerm()
 		if err != nil {
 			n.mutex.RUnlock()
@@ -83,10 +83,8 @@ func (n *Node) tallyHeartBeats(responses []*transport.AppendEntriesResponse) (r 
 			continue
 		}
 		if res.Term > n.currentTerm {
-			n.mutex.Lock()
 			r.err = n.stepDown(res.Term)
 			r.term = res.Term
-			n.mutex.Unlock()
 			return
 		}
 	}
@@ -122,4 +120,16 @@ func (n *Node) DeepCopyClients() []transport.RaftClient {
 		clients = append(clients, client)
 	}
 	return clients
+}
+
+func (n *Node) initLeaderState() {
+	n.nextIndex = make(map[string]int32)
+	n.matchIndex = make(map[string]int32)
+
+	lastLogIndex := n.log.LastLogIndex()
+
+	for _, peer := range n.peers {
+		n.nextIndex[peer] = lastLogIndex + 1
+		n.matchIndex[peer] = 0
+	}
 }

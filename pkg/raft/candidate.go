@@ -49,6 +49,8 @@ func (n *Node) startElection() error {
 		n.role = "leader"
 		n.currentLeader = n.id
 
+		n.initLeaderState()
+
 		go n.handleHeartBeatTimer()
 	}
 	n.mutex.Unlock()
@@ -67,8 +69,8 @@ func (n *Node) tallyVotes(channel chan *transport.RequestVoteResponse) (int, err
 			continue
 		}
 		if res.Term > n.currentTerm {
-			err := n.stepDown(res.Term)
 			n.mutex.Unlock()
+			err := n.stepDown(res.Term)
 
 			return 0, err
 		}
@@ -99,6 +101,8 @@ func (n *Node) sendVote(channel chan *transport.RequestVoteResponse, address str
 
 // stepDown reverts the node to follower, updates the term, clears votedFor, and persists the state.
 func (n *Node) stepDown(newTerm int32) error {
+	n.mutex.Lock()
+	defer n.mutex.Unlock()
 
 	n.currentTerm = newTerm
 	n.role = "follower"

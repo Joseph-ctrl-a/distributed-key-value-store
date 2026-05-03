@@ -26,6 +26,8 @@ type Node struct {
 	commitIndex     int32
 	store           *store.HashMap
 	lastApplied     int32
+	nextIndex       map[string]int32
+	matchIndex      map[string]int32
 }
 
 // NewNode defines how a Node should look

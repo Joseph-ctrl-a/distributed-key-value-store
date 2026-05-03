@@ -20,16 +20,20 @@ func (n *Node) AppendEntries(c context.Context, req *transport.AppendEntriesRequ
 
 // HeartBeat processes a heartbeat from the leader, stepping down if a higher term is seen and resetting the election timer.
 func (n *Node) handleHeartBeat(req *transport.AppendEntriesRequest) (res *transport.AppendEntriesResponse, err error) {
-	n.mutex.Lock()
 	res = &transport.AppendEntriesResponse{}
-	if req.Term > n.currentTerm {
+	n.mutex.RLock()
+	currentTerm := n.currentTerm
+	n.mutex.RUnlock()
+
+	if req.Term > currentTerm {
 		err = n.stepDown(req.Term)
 		if err != nil {
-			n.mutex.Unlock()
 			return res, err
 		}
 	}
 
+	n.mutex.Lock()
+	defer n.mutex.Unlock()
 	if req.Term < n.currentTerm {
 		res.Term = n.currentTerm
 		res.Success = false
@@ -39,7 +43,6 @@ func (n *Node) handleHeartBeat(req *transport.AppendEntriesRequest) (res *transp
 		n.resetElectionTimer()
 	}
 
-	n.mutex.Unlock()
 	return res, nil
 }
 
@@ -55,15 +58,20 @@ func (n *Node) handleEntry(req *transport.AppendEntriesRequest) (res *transport.
 	Error := func(err error) (*transport.AppendEntriesResponse, error) {
 		return &transport.AppendEntriesResponse{}, err
 	}
-	n.mutex.Lock()
-	defer n.mutex.Unlock()
 	// 1. Check if sending term is greater than ours
-	if req.Term > n.currentTerm {
+	n.mutex.RLock()
+	currentTerm := n.currentTerm
+	n.mutex.RUnlock()
+
+	if req.Term > currentTerm {
 		err = n.stepDown(req.Term)
 		if err != nil {
 			return Error(err)
 		}
 	}
+
+	n.mutex.Lock()
+	defer n.mutex.Unlock()
 	// 2. Check if sending term is less than ours
 	if req.Term < n.currentTerm {
 		return Failure(n.currentTerm)
@@ -115,7 +123,7 @@ func (n *Node) handleEntry(req *transport.AppendEntriesRequest) (res *transport.
 		}
 		return err
 	}
-	err = n.log.ReadLine(callbackFunction)
+	err = n.log.ForEach(callbackFunction)
 	if err != nil {
 		return Error(err)
 	}
