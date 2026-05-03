@@ -28,5 +28,3 @@ go.work.sum
 
 # Data directory (WAL and persistent state files)
 data/
-
-memory/
