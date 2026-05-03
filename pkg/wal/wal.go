@@ -17,6 +17,11 @@ type Wal struct {
 	lineCount int
 }
 
+type mapResult struct {
+	res []interface{}
+	err error
+}
+
 // Append formats and writes any given method to the WAL, other writes are blocked during this.
 func (w *Wal) Append(entry *LogEntry) (err error) {
 
@@ -149,20 +154,8 @@ func (w *Wal) SpliceInPlace(index int32) error {
 	return nil
 }
 
-func (w *Wal) ReadLine(callback func(i int, entry string) error) (err error) {
-	w.mutex.RLock()
-	defer w.mutex.RUnlock()
-	w.file.Seek(0, 0)
-	scanner := bufio.NewScanner(w.file)
-
-	var i int
-	for scanner.Scan() {
-		entry := scanner.Text()
-		err = callback(i, entry)
-		if err != nil {
-			return
-		}
-		i++
-	}
-	return
+func (w *Wal) EntriesFromIndex(index int) ([]string, error) {
+	return w.Filter(func(i int, entry string) bool {
+		return i+1 >= int(index)
+	})
 }

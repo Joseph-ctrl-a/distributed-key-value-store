@@ -337,7 +337,7 @@ func TestReadLine(t *testing.T) {
 		}
 
 		var lines []string
-		err := w.ReadLine(func(_ int, entry string) error {
+		err := w.ForEach(func(_ int, entry string) error {
 			lines = append(lines, entry)
 			return nil
 		})
@@ -356,7 +356,7 @@ func TestReadLine(t *testing.T) {
 	t.Run("empty WAL yields zero callbacks", func(t *testing.T) {
 		w := newTestWal(t)
 		count := 0
-		w.ReadLine(func(_ int, _ string) error {
+		w.ForEach(func(_ int, _ string) error {
 			count++
 			return nil
 		})
