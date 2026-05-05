@@ -30,6 +30,11 @@ func (w *Wal) Append(entry *LogEntry) (err error) {
 
 	log := entry.FormatEntry()
 
+	_, err = w.file.Seek(0, 2)
+	if err != nil {
+		return err
+	}
+
 	_, err = w.file.WriteString(log)
 	if err != nil {
 		return err
@@ -42,7 +47,7 @@ func (w *Wal) Append(entry *LogEntry) (err error) {
 // Creates a new WAL
 func NewWal(filepath string) (*Wal, error) {
 
-	file, err := os.OpenFile(filepath, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0644)
+	file, err := os.OpenFile(filepath, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
 		return nil, err
 	}
@@ -96,7 +101,10 @@ func (w *Wal) LastLogIndex() int32 {
 func (w *Wal) GetTermAtIndex(index int32) (int32, error) {
 	w.mutex.RLock()
 	defer w.mutex.RUnlock()
-	w.file.Seek(0, 0)
+	_, err := w.file.Seek(0, 0)
+	if err != nil {
+		return 0, err
+	}
 	scanner := bufio.NewScanner(w.file)
 
 	var i int32 = 0
@@ -123,7 +131,10 @@ func (w *Wal) GetTermAtIndex(index int32) (int32, error) {
 func (w *Wal) SpliceInPlace(index int32) error {
 	w.mutex.Lock()
 	defer w.mutex.Unlock()
-	w.file.Seek(0, 0)
+	_, err := w.file.Seek(0, 0)
+	if err != nil {
+		return err
+	}
 	scanner := bufio.NewScanner(w.file)
 	splice := []string{}
 
@@ -139,8 +150,14 @@ func (w *Wal) SpliceInPlace(index int32) error {
 	if len(splice) == 0 {
 		return errors.New("no entries found at or before index")
 	}
-	w.file.Truncate(0)
-	w.file.Seek(0, 0)
+	err = w.file.Truncate(0)
+	if err != nil {
+		return err
+	}
+	_, err = w.file.Seek(0, 0)
+	if err != nil {
+		return err
+	}
 	for _, entry := range splice {
 		_, err := w.file.WriteString(entry + "\n")
 
