@@ -19,7 +19,9 @@ func (n *Node) startElection() error {
 	n.role = "candidate"
 	n.votedFor = n.id
 
+	n.mutex.Unlock()
 	err := n.persistentState.writeCurrentState(n.currentTerm, n.votedFor)
+	n.mutex.Lock()
 
 	if err != nil {
 		n.mutex.Unlock()
@@ -45,13 +47,15 @@ func (n *Node) startElection() error {
 		return err
 	}
 	n.mutex.Lock()
-	if votesReceived > (len(n.peers)/2)+1 && n.role == "candidate" {
+	clusterSize := len(n.peers) + 1
+	majority := clusterSize/2 + 1
+	if votesReceived >= majority && n.role == "candidate" {
 		n.role = "leader"
 		n.currentLeader = n.id
 
 		n.initLeaderState()
 
-		go n.handleHeartBeatTimer()
+		go n.runLeaderReplicationLoop()
 	}
 	n.mutex.Unlock()
 	return nil

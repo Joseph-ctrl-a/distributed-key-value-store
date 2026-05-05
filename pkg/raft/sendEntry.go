@@ -4,77 +4,156 @@ import (
 	"Distributed_Key_Value_Store/pkg/transport"
 	"context"
 	"errors"
+	"fmt"
+	"slices"
 	"time"
 )
 
+const (
+	appendEntriesTimeout      = 75 * time.Millisecond
+	leaderReplicationInterval = 50 * time.Millisecond
+)
+
 type appendEntryResult struct {
-	peer string
-	res  *transport.AppendEntriesResponse
-	err  error
+	peer     string
+	request  *transport.AppendEntriesRequest
+	response *transport.AppendEntriesResponse
+	err      error
 }
 
-func (n *Node) sendEntry(channel chan *appendEntryResult, req *transport.AppendEntriesRequest, address string) {
+func (n *Node) runLeaderReplicationLoop() error {
+	ticker := time.NewTicker(leaderReplicationInterval)
+	defer ticker.Stop()
+
+	for {
+		<-ticker.C
+
+		if !n.isLeader() {
+			return nil
+		}
+
+		for _, peer := range n.deepCopyPeers() {
+			request, err := n.newAppendEntriesRequest(peer)
+			if err != nil {
+				continue
+			}
+			if err := n.sendAppendEntriesToFollower(request, peer); err != nil {
+				continue
+			}
+		}
+		if err := n.tryAdvanceCommitIndex(); err != nil {
+			return err
+		}
+		if err := n.applyCommittedEntries(); err != nil {
+			return err
+		}
+	}
+}
+
+func (n *Node) sendAppendEntriesToFollower(request *transport.AppendEntriesRequest, peer string) error {
+	if request == nil {
+		return errors.New("append entries request is nil")
+	}
+	if peer == "" {
+		return errors.New("peer is empty")
+	}
 
 	n.mutex.RLock()
-	client := n.clients[address]
+	client, ok := n.clients[peer]
 	n.mutex.RUnlock()
-	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 75*time.Millisecond)
-		defer cancel()
-		res, err := client.AppendEntries(ctx, req)
-		if err != nil {
-			channel <- nil
-			return
-		}
-		channel <- &appendEntryResult{address, res, nil}
-	}()
+	if !ok || client == nil {
+		return fmt.Errorf("raft client for peer %q not found", peer)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), appendEntriesTimeout)
+	defer cancel()
+
+	response, err := client.AppendEntries(ctx, request)
+	return n.handleAppendEntriesResult(&appendEntryResult{
+		peer:     peer,
+		request:  request,
+		response: response,
+		err:      err,
+	})
 }
 
-func (n *Node) sendEntriesToFollowers(c context.Context) {
-
-	channel := make(chan *appendEntryResult, len(n.peers))
-
-	sentCount := 0
-	for _, peer := range n.peers {
-		req, err := n.newAppendEntriesRequest(peer)
-		if err != nil {
-			continue
-		}
-
-		n.sendEntry(channel, req, peer)
-		sentCount++
-	}
-	for range sentCount {
-		res := <-channel
-		n.handleEntryResult(res)
-	}
-}
-
-func (n *Node) handleEntryResult(result *appendEntryResult) {
+func (n *Node) handleAppendEntriesResult(result *appendEntryResult) error {
 	if result == nil {
-		return
+		return nil
+	}
+	if result.err != nil {
+		return result.err
+	}
+	if result.request == nil {
+		return errors.New("append entries request is nil")
+	}
+	if result.response == nil {
+		return errors.New("append entries response is nil")
 	}
 
 	n.mutex.RLock()
 	currentTerm := n.currentTerm
 	n.mutex.RUnlock()
 
-	if result.res.Term > currentTerm {
-		_ = n.stepDown(result.res.Term)
-		return
+	if result.response.Term > currentTerm {
+		return n.stepDown(result.response.Term)
+	}
+	if result.response.Term < currentTerm {
+		return nil
 	}
 
 	n.mutex.Lock()
 	defer n.mutex.Unlock()
-	if !result.res.Success {
+	if n.nextIndex == nil || n.matchIndex == nil {
+		return errors.New("leader replication state is not initialized")
+	}
+
+	if !result.response.Success {
 		if n.nextIndex[result.peer] > 1 {
 			n.nextIndex[result.peer]--
 		}
-	} else {
-		n.nextIndex[result.peer] = n.log.LastLogIndex() + 1
-		n.matchIndex[result.peer] = n.log.LastLogIndex()
+		return nil
 	}
-	return
+
+	matchIndex := result.request.PrevLogIndex + int32(len(result.request.Entries))
+	if matchIndex > n.matchIndex[result.peer] {
+		n.matchIndex[result.peer] = matchIndex
+	}
+	if nextIndex := matchIndex + 1; nextIndex > n.nextIndex[result.peer] {
+		n.nextIndex[result.peer] = nextIndex
+	}
+	return nil
+}
+
+func (n *Node) isLeader() bool {
+	n.mutex.RLock()
+	defer n.mutex.RUnlock()
+	return n.role == "leader"
+}
+
+func (n *Node) deepCopyPeers() []string {
+	n.mutex.RLock()
+	defer n.mutex.RUnlock()
+
+	peers := make([]string, 0, len(n.peers))
+	for _, peer := range n.peers {
+		peers = append(peers, peer)
+	}
+	return peers
+}
+
+func (n *Node) initLeaderState() {
+	n.mutex.Lock()
+	n.nextIndex = make(map[string]int32)
+	n.matchIndex = make(map[string]int32)
+
+	lastLogIndex := n.log.LastLogIndex()
+
+	for _, peer := range n.peers {
+		n.nextIndex[peer] = lastLogIndex + 1
+		n.matchIndex[peer] = 0
+	}
+	n.mutex.Unlock()
 }
 
 func (n *Node) newAppendEntriesRequest(peerId string) (*transport.AppendEntriesRequest, error) {
@@ -85,20 +164,13 @@ func (n *Node) newAppendEntriesRequest(peerId string) (*transport.AppendEntriesR
 	commitIndex := n.commitIndex
 	n.mutex.RUnlock()
 
-	req := transport.AppendEntriesRequest{}
-	req.Term = currentTerm
-	req.LeaderId = id
-
-	var prevLogTerm int32
-	var prevLogIndex int32
-	if nextPeerIndex == 0 {
+	if nextPeerIndex < 1 {
 		return nil, errors.New("nextIndex not initialized")
-	} else {
-		prevLogIndex = nextPeerIndex - 1
 	}
-	if prevLogIndex == 0 {
-		prevLogTerm = 0
-	} else {
+
+	prevLogIndex := nextPeerIndex - 1
+	var prevLogTerm int32
+	if prevLogIndex > 0 {
 		var err error
 		prevLogTerm, err = n.log.GetTermAtIndex(prevLogIndex)
 		if err != nil {
@@ -106,16 +178,75 @@ func (n *Node) newAppendEntriesRequest(peerId string) (*transport.AppendEntriesR
 		}
 	}
 
-	req.PrevLogIndex = prevLogIndex
-	req.PrevLogTerm = prevLogTerm
-	req.LeaderCommit = commitIndex
-
 	entries, err := n.log.EntriesFromIndex(int(nextPeerIndex))
-
 	if err != nil {
 		return nil, err
 	}
-	req.Entries = entries
 
-	return &req, nil
+	return &transport.AppendEntriesRequest{
+		Term:         currentTerm,
+		LeaderId:     id,
+		Entries:      entries,
+		PrevLogIndex: prevLogIndex,
+		PrevLogTerm:  prevLogTerm,
+		LeaderCommit: commitIndex,
+	}, nil
+}
+
+func (n *Node) tryAdvanceCommitIndex() error {
+	n.mutex.Lock()
+	defer n.mutex.Unlock()
+	indexes := []int{}
+	indexes = append(indexes, int(n.log.LastLogIndex()))
+
+	for _, peer := range n.peers {
+		indexes = append(indexes, int(n.matchIndex[peer]))
+	}
+	slices.SortFunc(indexes, func(a, b int) int {
+		if a < b {
+			return -1
+		}
+		if a > b {
+			return 1
+		}
+		return 0
+	})
+	candidateIndex := int32(indexes[len(indexes)-((len(indexes)/2)+1)])
+	if candidateIndex <= n.commitIndex || candidateIndex == 0 {
+		return nil
+	}
+
+	candidateTerm, err := n.log.GetTermAtIndex(candidateIndex)
+
+	if err != nil {
+		return err
+	}
+	if candidateTerm == n.currentTerm {
+		n.commitIndex = candidateIndex
+	}
+
+	return nil
+}
+
+func (n *Node) applyCommittedEntries() error {
+	n.mutex.Lock()
+	defer n.mutex.Unlock()
+	start := n.lastApplied + 1
+	entries, err := n.log.EntriesFromIndex(int(start))
+	if err != nil {
+		return err
+	}
+
+	for i, entry := range entries {
+		index := int(start) + i
+
+		if index > int(n.commitIndex) {
+			break
+		}
+		if err := n.applyEntry(entry); err != nil {
+			return err
+		}
+		n.lastApplied = int32(index)
+	}
+	return nil
 }
