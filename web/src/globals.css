@@ -1,0 +1,121 @@
+:root {
+  --bg:           #080808;
+  --surface:      #101010;
+  --surface-2:    #161616;
+  --border:       #1e1e1e;
+  --border-hi:    #2e2e2e;
+
+  --green:        #00e676;
+  --green-dim:    rgba(0, 230, 118, 0.12);
+  --amber:        #ffb300;
+  --amber-dim:    rgba(255, 179, 0, 0.12);
+  --red:          #ff4444;
+  --red-dim:      rgba(255, 68, 68, 0.12);
+  --blue:         #40c4ff;
+
+  --text:         #c8c8c8;
+  --text-bright:  #eeeeee;
+  --text-dim:     #484848;
+
+  --font: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  --radius: 2px;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 12px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+#app {
+  height: 100%;
+}
+
+button {
+  font-family: var(--font);
+  font-size: 11px;
+  cursor: pointer;
+  border: 1px solid var(--border-hi);
+  background: var(--surface-2);
+  color: var(--text);
+  padding: 4px 10px;
+  border-radius: var(--radius);
+  letter-spacing: 0.04em;
+  transition: background 0.1s, border-color 0.1s, color 0.1s;
+}
+
+button:hover:not(:disabled) {
+  background: #1e1e1e;
+  border-color: #3a3a3a;
+  color: var(--text-bright);
+}
+
+button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+button.primary {
+  background: var(--green-dim);
+  border-color: var(--green);
+  color: var(--green);
+}
+
+button.primary:hover:not(:disabled) {
+  background: rgba(0, 230, 118, 0.2);
+}
+
+button.danger {
+  background: var(--red-dim);
+  border-color: var(--red);
+  color: var(--red);
+}
+
+input, select {
+  font-family: var(--font);
+  font-size: 11px;
+  background: var(--surface);
+  border: 1px solid var(--border-hi);
+  color: var(--text);
+  padding: 4px 8px;
+  border-radius: var(--radius);
+  outline: none;
+  width: 100%;
+}
+
+input::placeholder {
+  color: var(--text-dim);
+}
+
+input:focus, select:focus {
+  border-color: #3a3a3a;
+}
+
+select option {
+  background: var(--surface-2);
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-hi);
+  border-radius: 2px;
+}

@@ -1,0 +1,40 @@
+.panel {
+  border-bottom: 1px solid var(--border);
+  padding: 8px 14px 10px;
+  flex-shrink: 0;
+}
+
+.sectionLabel {
+  font-size: 10px;
+  color: var(--green);
+  letter-spacing: 0.1em;
+  margin-bottom: 8px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.row:last-child {
+  margin-bottom: 0;
+}
+
+.prompt {
+  font-size: 10px;
+  color: var(--text-dim);
+  letter-spacing: 0.08em;
+  width: 26px;
+  flex-shrink: 0;
+}
+
+.wideInput {
+  flex: 1;
+}
+
+.submitBtn {
+  flex-shrink: 0;
+  padding: 4px 8px;
+}
