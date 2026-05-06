@@ -13,7 +13,7 @@ export const nodeStatusSchema = z.object({
   lastLogIndex: z.number(),
   nextIndex: numberMapSchema,
   matchIndex: numberMapSchema,
-  blockedPeers: z.array(z.string()).default([]),
+  blockedPeers: z.array(z.string()).nullish().transform((v) => v ?? []),
 })
 
 export const nodeSnapshotSchema = z.object({
@@ -49,6 +49,15 @@ const writeResultSchema = z.object({
   index: z.number().optional(),
   term: z.number().optional(),
 })
+
+export const logEntrySchema = z.object({
+  index:  z.number(),
+  term:   z.number(),
+  method: z.string(),
+  params: z.array(z.string()),
+})
+
+export type LogEntry = z.infer<typeof logEntrySchema>
 
 const errorSchema = z.object({
   error: z.string(),
@@ -97,6 +106,8 @@ export const api = {
   setKey: (key: string, value: string) =>
     request('/api/kv/set', writeResultSchema, { method: 'POST', body: { key, value } }),
   deleteKey: (key: string) => request('/api/kv/delete', writeResultSchema, { method: 'POST', body: { key } }),
+  nodeKV:  (id: string) => request(`/api/nodes/${id}/kv`,  z.record(z.string(), z.string())),
+  nodeLog: (id: string) => request(`/api/nodes/${id}/log`, z.array(logEntrySchema)),
 }
 
 export function websocketUrl() {
