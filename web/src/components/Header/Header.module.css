@@ -1,0 +1,99 @@
+.header {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  flex-shrink: 0;
+}
+
+.brand {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: fit-content;
+}
+
+.title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--green);
+  letter-spacing: 0.08em;
+}
+
+.sub {
+  font-size: 10px;
+  color: var(--text-dim);
+  letter-spacing: 0.04em;
+}
+
+.metrics {
+  display: flex;
+  gap: 20px;
+  flex: 1;
+}
+
+.metric {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.metricLabel {
+  font-size: 9px;
+  color: var(--text-dim);
+  letter-spacing: 0.1em;
+}
+
+.metricVal {
+  font-size: 12px;
+  color: var(--text-bright);
+  font-weight: 600;
+}
+
+.metricHi {
+  font-size: 12px;
+  color: var(--green);
+  font-weight: 600;
+}
+
+.metricWarn {
+  font-size: 12px;
+  color: var(--amber);
+  font-weight: 600;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.connected {
+  font-size: 10px;
+  color: var(--green);
+  letter-spacing: 0.06em;
+  padding: 2px 6px;
+  border: 1px solid var(--green);
+  border-radius: 2px;
+}
+
+.connecting {
+  font-size: 10px;
+  color: var(--amber);
+  letter-spacing: 0.06em;
+  padding: 2px 6px;
+  border: 1px solid var(--amber);
+  border-radius: 2px;
+}
+
+.offline {
+  font-size: 10px;
+  color: var(--red);
+  letter-spacing: 0.06em;
+  padding: 2px 6px;
+  border: 1px solid var(--red);
+  border-radius: 2px;
+}

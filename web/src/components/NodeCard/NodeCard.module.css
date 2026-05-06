@@ -1,0 +1,158 @@
+.card {
+  padding: 12px 14px;
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  position: relative;
+}
+
+.card:last-child {
+  border-right: none;
+}
+
+.card.selected {
+  outline: 1px solid var(--border-hi);
+  outline-offset: -1px;
+}
+
+.card:hover {
+  background: #141414;
+}
+
+.card.leader {
+  background: linear-gradient(180deg, rgba(0,230,118,0.06) 0%, var(--surface) 60%);
+}
+
+.card.candidate {
+  background: linear-gradient(180deg, rgba(255,179,0,0.06) 0%, var(--surface) 60%);
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.roleRow {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.dot {
+  font-size: 8px;
+  color: var(--text-dim);
+}
+
+.dot_leader    { color: var(--green); }
+.dot_candidate { color: var(--amber); }
+.dot_follower  { color: var(--text-dim); }
+.dot_starting  { color: var(--text-dim); }
+.dot_stopped   { color: var(--red); }
+
+.role {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+}
+
+.card.leader .role    { color: var(--green); }
+.card.candidate .role { color: var(--amber); }
+.card.stopped .role   { color: var(--red); }
+
+.toggleBtn {
+  padding: 2px 6px;
+  font-size: 10px;
+  border-color: var(--border);
+  background: transparent;
+  color: var(--text-dim);
+}
+
+.toggleBtn:hover:not(:disabled) {
+  color: var(--text);
+  border-color: var(--border-hi);
+}
+
+.name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-bright);
+  margin-top: 2px;
+}
+
+.addr {
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: 6px 0;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.statLabel {
+  font-size: 9px;
+  color: var(--text-dim);
+  letter-spacing: 0.08em;
+}
+
+.statVal {
+  font-size: 12px;
+  color: var(--text-bright);
+  font-weight: 600;
+}
+
+.peers {
+  margin-top: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.peerRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 10px;
+}
+
+.peerAddr {
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.peerIdx {
+  color: var(--text);
+  flex-shrink: 0;
+  margin-left: 6px;
+}
+
+.error {
+  font-size: 10px;
+  color: var(--text-dim);
+  margin-top: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

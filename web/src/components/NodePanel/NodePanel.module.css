@@ -1,0 +1,180 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 11;
+  width: 380px;
+  background: var(--surface);
+  border-left: 1px solid var(--border-hi);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: slideIn 0.18s ease-out;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.nodeInfo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dot {
+  font-size: 8px;
+  color: var(--text-dim);
+}
+.dot_leader    { color: var(--green); }
+.dot_candidate { color: var(--amber); }
+.dot_stopped   { color: var(--red); }
+
+.nodeName {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-bright);
+}
+
+.roleBadge {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 2px 6px;
+  border-radius: 2px;
+  border: 1px solid var(--border-hi);
+  color: var(--text-dim);
+}
+.leader    { border-color: var(--green); color: var(--green); background: var(--green-dim); }
+.candidate { border-color: var(--amber); color: var(--amber); background: var(--amber-dim); }
+.stopped   { border-color: var(--red);   color: var(--red);   background: var(--red-dim); }
+
+.closeBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  font-size: 13px;
+  padding: 4px 6px;
+  cursor: pointer;
+}
+.closeBtn:hover { color: var(--text-bright); }
+
+.statBar {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.statPill {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 0;
+  border-right: 1px solid var(--border);
+}
+.statPill:last-child { border-right: none; }
+
+.statLabel {
+  font-size: 9px;
+  color: var(--text-dim);
+  letter-spacing: 0.08em;
+}
+
+.statValue {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-bright);
+  line-height: 1.3;
+}
+
+.sections {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.section {
+  border-bottom: 1px solid var(--border);
+}
+
+.sectionLabel {
+  font-size: 10px;
+  color: var(--green);
+  letter-spacing: 0.1em;
+  padding: 10px 14px 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+}
+
+.count {
+  color: var(--text-dim);
+  font-size: 10px;
+}
+
+.kvList,
+.logList {
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.empty {
+  font-size: 11px;
+  color: var(--text-dim);
+  padding: 10px 14px;
+}
+
+.kvRow {
+  display: grid;
+  grid-template-columns: 1fr 16px 1fr;
+  gap: 4px;
+  padding: 4px 14px;
+  font-size: 11px;
+  line-height: 1.5;
+  align-items: center;
+}
+.kvRow:hover { background: var(--surface-2); }
+
+.kvKey   { color: var(--text-bright); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kvArrow { color: var(--text-dim); text-align: center; }
+.kvValue { color: var(--green); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.logRow {
+  display: grid;
+  grid-template-columns: 36px 36px 1fr 28px;
+  gap: 6px;
+  padding: 3px 14px;
+  font-size: 11px;
+  line-height: 1.5;
+  align-items: center;
+}
+.logRow:hover { background: var(--surface-2); }
+
+.logIndex  { color: var(--text-dim); }
+.logMethod { font-weight: 700; letter-spacing: 0.04em; }
+.methodSet { color: var(--green); }
+.methodDel { color: var(--red); }
+.logParams { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.logTerm   { color: var(--text-dim); text-align: right; }
