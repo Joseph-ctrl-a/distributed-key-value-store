@@ -11,8 +11,8 @@ import (
 )
 
 const (
-	appendEntriesTimeout      = 75 * time.Millisecond
-	leaderReplicationInterval = 50 * time.Millisecond
+	appendEntriesTimeout      = 750 * time.Millisecond
+	leaderReplicationInterval = 500 * time.Millisecond
 )
 
 type appendEntryResult struct {
