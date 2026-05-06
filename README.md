@@ -68,13 +68,13 @@ The React frontend visualises the live cluster state:
 
 ## How Raft works here
 
-**Leader election** — nodes use a randomised election timeout. When a follower stops hearing from the leader it becomes a candidate, increments its term, and requests votes from peers. A node wins if it gets a majority and its log is at least as up-to-date as each voter's log.
+**Leader election**: nodes use a randomised election timeout. When a follower stops hearing from the leader it becomes a candidate, increments its term, and requests votes from peers. A node wins if it gets a majority and its log is at least as up-to-date as each voter's log.
 
-**Log replication** — the leader appends each write to its WAL and replicates it to followers via `AppendEntries` RPCs every 500ms. A follower only accepts an entry if its log matches at `prevLogIndex`/`prevLogTerm`. The leader advances `commitIndex` once a majority of nodes have matched the entry.
+**Log replication**: the leader appends each write to its WAL and replicates it to followers via `AppendEntries` RPCs every 500ms. A follower only accepts an entry if its log matches at `prevLogIndex`/`prevLogTerm`. The leader advances `commitIndex` once a majority of nodes have matched the entry.
 
-**Catch-up** — when a partitioned node rejoins, the leader backtracks `nextIndex` for that peer one step per tick until it finds the common point, then sends all missing entries in a single batch.
+**Catch-up**: when a partitioned node rejoins, the leader backtracks `nextIndex` for that peer one step per tick until it finds the common point, then sends all missing entries in a single batch.
 
-**Persistence** — `currentTerm` and `votedFor` are written to `data/{id}/state.json` before any RPC response. The WAL is append-only and used to reconstruct state on restart.
+**Persistence**: `currentTerm` and `votedFor` are written to `data/{id}/state.json` before any RPC response. The WAL is append-only and used to reconstruct state on restart.
 
 ## Tests
 
