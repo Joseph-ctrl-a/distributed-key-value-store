@@ -6,10 +6,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
+
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // AppendEntries handles incoming AppendEntries RPCs, routing to heartbeat or entry replication logic.
 func (n *Node) AppendEntries(c context.Context, req *transport.AppendEntriesRequest) (res *transport.AppendEntriesResponse, err error) {
+	if n.isPeerBlocked(req.LeaderId) {
+		return nil, status.Error(codes.Unavailable, "peer blocked by simulated network policy")
+	}
+
 	if len(req.Entries) == 0 {
 		return n.handleHeartBeat(req)
 	} else {
@@ -37,10 +45,16 @@ func (n *Node) handleHeartBeat(req *transport.AppendEntriesRequest) (res *transp
 	if req.Term < n.currentTerm {
 		res.Term = n.currentTerm
 		res.Success = false
+		log.Printf("[append] node=%s rejected heartbeat leader=%s reqTerm=%d currentTerm=%d", n.id, req.LeaderId, req.Term, n.currentTerm)
 	} else {
 		res.Term = n.currentTerm
 		res.Success = true
 		n.resetElectionTimer()
+		n.commitIndex = min(req.LeaderCommit, n.log.LastLogIndex())
+		if err := n.applyCommittedEntriesFromLog(); err != nil {
+			return res, err
+		}
+		log.Printf("[append] node=%s accepted heartbeat leader=%s term=%d commit=%d", n.id, req.LeaderId, req.Term, req.LeaderCommit)
 	}
 
 	return res, nil
@@ -74,6 +88,7 @@ func (n *Node) handleEntry(req *transport.AppendEntriesRequest) (res *transport.
 	defer n.mutex.Unlock()
 	// 2. Check if sending term is less than ours
 	if req.Term < n.currentTerm {
+		log.Printf("[append] node=%s rejected entries leader=%s reqTerm=%d currentTerm=%d", n.id, req.LeaderId, req.Term, n.currentTerm)
 		return Failure(n.currentTerm)
 	}
 
@@ -81,9 +96,11 @@ func (n *Node) handleEntry(req *transport.AppendEntriesRequest) (res *transport.
 	if req.PrevLogIndex != 0 {
 		termAtIndex, err := n.log.GetTermAtIndex(req.PrevLogIndex)
 		if err != nil {
-			return Error(err)
+			log.Printf("[append] node=%s rejected entries leader=%s missingPrevIndex=%d", n.id, req.LeaderId, req.PrevLogIndex)
+			return Failure(n.currentTerm)
 		}
 		if termAtIndex != req.PrevLogTerm {
+			log.Printf("[append] node=%s rejected entries leader=%s prevIndex=%d localTerm=%d leaderTerm=%d", n.id, req.LeaderId, req.PrevLogIndex, termAtIndex, req.PrevLogTerm)
 			return Failure(n.currentTerm)
 		}
 	}
@@ -112,22 +129,24 @@ func (n *Node) handleEntry(req *transport.AppendEntriesRequest) (res *transport.
 	n.commitIndex = min(req.LeaderCommit, n.log.LastLogIndex())
 
 	// 7. Apply entries
-	callbackFunction := func(i int, entry string) (err error) {
-		if i+1 <= int(n.commitIndex) && i+1 > int(n.lastApplied) {
-			err = n.applyEntry(entry)
-			if err != nil {
-				return err
-			}
-			n.lastApplied++
-
-		}
-		return err
-	}
-	err = n.log.ForEach(callbackFunction)
-	if err != nil {
+	if err := n.applyCommittedEntriesFromLog(); err != nil {
 		return Error(err)
 	}
+	log.Printf("[append] node=%s accepted entries leader=%s count=%d lastIndex=%d commit=%d", n.id, req.LeaderId, len(req.Entries), n.log.LastLogIndex(), n.commitIndex)
 	return Success(n.currentTerm)
+}
+
+func (n *Node) applyCommittedEntriesFromLog() error {
+	return n.log.ForEach(func(i int, entry string) error {
+		index := int32(i + 1)
+		if index <= n.commitIndex && index > n.lastApplied {
+			if err := n.applyEntry(entry); err != nil {
+				return err
+			}
+			n.lastApplied = index
+		}
+		return nil
+	})
 }
 
 // applyEntry will apply an entry to the hashmap

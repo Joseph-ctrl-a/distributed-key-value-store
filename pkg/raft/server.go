@@ -5,6 +5,8 @@ import (
 	"log"
 	"net"
 
+	"google.golang.org/grpc/credentials/insecure"
+
 	"google.golang.org/grpc"
 )
 
@@ -12,7 +14,7 @@ import (
 func (n *Node) createConnections() error {
 	n.clients = make(map[string]transport.RaftClient)
 	for _, peerAddress := range n.peers {
-		connection, err := grpc.NewClient(peerAddress)
+		connection, err := grpc.NewClient(peerAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
 
 		if err != nil {
 			return err
@@ -31,6 +33,7 @@ func (n *Node) startServer() error {
 	}
 	server := grpc.NewServer()
 	transport.RegisterRaftServer(server, n)
+	log.Printf("[start] node=%s listening peers=%d", n.id, len(n.peers))
 
 	go func() {
 		err := server.Serve(listen)

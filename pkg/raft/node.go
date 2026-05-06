@@ -4,7 +4,8 @@ import (
 	"Distributed_Key_Value_Store/pkg/store"
 	"Distributed_Key_Value_Store/pkg/transport"
 	"Distributed_Key_Value_Store/pkg/wal"
-	"flag"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -28,17 +29,13 @@ type Node struct {
 	lastApplied     int32
 	nextIndex       map[string]int32
 	matchIndex      map[string]int32
+	blockedPeers    map[string]bool
 }
 
 // NewNode defines how a Node should look
-func NewNode(wal *wal.Wal) (*Node, error) {
+func NewNode(id string, peers []string, wal *wal.Wal) (*Node, error) {
 
-	// Get CL params
-	id := flag.String("id", "", "the node's ip:port")
-	peers := flag.String("peers", "", "comma separated list of peer addresses")
-	flag.Parse()
-
-	node := &Node{id: *id, peers: strings.Split(*peers, ","), role: "follower", currentLeader: "", votedFor: "", log: wal, commitIndex: 0}
+	node := &Node{id: id, peers: peers, role: "follower", currentLeader: "", votedFor: "", log: wal, commitIndex: 0, blockedPeers: make(map[string]bool)}
 
 	err := node.init()
 	if err != nil {
@@ -58,18 +55,29 @@ func (n *Node) init() error {
 	if err != nil {
 		return err
 	}
-	n.startElectionTimer()
 
-	state, err := NewPersistentState()
+	state, err := NewPersistentState(n.persistentStatePath())
 
 	if err != nil {
 		return err
 	}
 	n.persistentState = state
+	n.currentTerm = state.CurrentTerm
+	n.votedFor = state.VotedFor
 
 	n.electionTimer = time.NewTimer(time.Millisecond * time.Duration(n.RandomTime(150, 150)))
 
+	n.startElectionTimer()
+
 	n.store = store.NewHashMap()
+
 	return nil
 
+}
+
+func (n *Node) persistentStatePath() string {
+	idSanitized := strings.NewReplacer(":", "_", "/", "_", "\\", "_").Replace(n.id)
+	dataDir := filepath.Join("data", idSanitized)
+	_ = os.MkdirAll(dataDir, 0755)
+	return filepath.Join(dataDir, "state.json")
 }

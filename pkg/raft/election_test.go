@@ -152,7 +152,7 @@ func TestTallyVotes(t *testing.T) {
 		ch <- &transport.RequestVoteResponse{VoteGranted: false, Term: 1}
 		ch <- &transport.RequestVoteResponse{VoteGranted: false, Term: 1}
 
-		votes, err := n.tallyVotes(ch)
+		votes, err := n.tallyVotes(ch, len(n.peers))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -170,7 +170,7 @@ func TestTallyVotes(t *testing.T) {
 		ch <- nil
 		ch <- &transport.RequestVoteResponse{VoteGranted: true, Term: 1}
 
-		votes, err := n.tallyVotes(ch)
+		votes, err := n.tallyVotes(ch, len(n.peers))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -188,7 +188,7 @@ func TestTallyVotes(t *testing.T) {
 		ch := make(chan *transport.RequestVoteResponse, 1)
 		ch <- &transport.RequestVoteResponse{VoteGranted: false, Term: 10}
 
-		_, err := n.tallyVotes(ch)
+		_, err := n.tallyVotes(ch, len(n.peers))
 		if err != nil {
 			t.Fatal(err)
 		}
