@@ -126,6 +126,8 @@ func (n *Node) ControlHandler() http.Handler {
 	mux.HandleFunc("POST /kv/set", n.handleSet)
 	mux.HandleFunc("POST /kv/delete", n.handleDelete)
 	mux.HandleFunc("GET /kv/", n.handleGet)
+	mux.HandleFunc("GET /kv", n.handleDumpKV)
+	mux.HandleFunc("GET /log", n.handleDumpLog)
 	return mux
 }
 
@@ -185,6 +187,39 @@ func (n *Node) handleGet(w http.ResponseWriter, r *http.Request) {
 	key := strings.TrimPrefix(r.URL.Path, "/kv/")
 	value, ok := n.store.Get(key)
 	writeJSON(w, http.StatusOK, map[string]any{"key": key, "value": value, "ok": ok})
+}
+
+func (n *Node) handleDumpKV(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, n.store.All())
+}
+
+type logEntryView struct {
+	Index  int      `json:"index"`
+	Term   int      `json:"term"`
+	Method string   `json:"method"`
+	Params []string `json:"params"`
+}
+
+func (n *Node) handleDumpLog(w http.ResponseWriter, r *http.Request) {
+	entries, err := n.log.EntriesFromIndex(1)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	views := make([]logEntryView, 0, len(entries))
+	for i, raw := range entries {
+		entry, err := wal.ParseToLogEntry(raw)
+		if err != nil {
+			continue
+		}
+		views = append(views, logEntryView{
+			Index:  i + 1,
+			Term:   entry.Term,
+			Method: entry.MethodName,
+			Params: entry.Params,
+		})
+	}
+	writeJSON(w, http.StatusOK, views)
 }
 
 func (n *Node) isPeerBlocked(peer string) bool {

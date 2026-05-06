@@ -51,6 +51,17 @@ func (h *HashMap) Delete(key string) {
 	delete(h.data, key)
 }
 
+// All returns a snapshot of all key-value pairs.
+func (h *HashMap) All() map[string]string {
+	h.mutex.RLock()
+	defer h.mutex.RUnlock()
+	out := make(map[string]string, len(h.data))
+	for k, v := range h.data {
+		out[k] = v
+	}
+	return out
+}
+
 // Has checks if a given exists, blocks any writes during this. Returns a boolean.
 func (h *HashMap) Has(key string) bool {
 	h.mutex.RLock()

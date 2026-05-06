@@ -77,9 +77,9 @@ func WithHTTPClient(client *http.Client) Option {
 
 func DefaultNodes() []NodeConfig {
 	return []NodeConfig{
-		{Name: "node1", RaftAddr: "localhost:5001", ControlAddr: "localhost:6001"},
-		{Name: "node2", RaftAddr: "localhost:5002", ControlAddr: "localhost:6002"},
-		{Name: "node3", RaftAddr: "localhost:5003", ControlAddr: "localhost:6003"},
+		{Name: "node1", RaftAddr: "127.0.0.1:5001", ControlAddr: "127.0.0.1:6001"},
+		{Name: "node2", RaftAddr: "127.0.0.1:5002", ControlAddr: "127.0.0.1:6002"},
+		{Name: "node3", RaftAddr: "127.0.0.1:5003", ControlAddr: "127.0.0.1:6003"},
 	}
 }
 

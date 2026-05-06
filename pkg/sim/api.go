@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"time"
 
@@ -17,6 +18,8 @@ func (m *Manager) Handler() http.Handler {
 	mux.HandleFunc("POST /api/cluster/stop", m.handleClusterStop)
 	mux.HandleFunc("POST /api/nodes/{id}/start", m.handleNodeStart)
 	mux.HandleFunc("POST /api/nodes/{id}/stop", m.handleNodeStop)
+	mux.HandleFunc("GET /api/nodes/{id}/kv", m.handleNodeKV)
+	mux.HandleFunc("GET /api/nodes/{id}/log", m.handleNodeLog)
 	mux.HandleFunc("POST /api/partitions", m.handlePartitions)
 	mux.HandleFunc("DELETE /api/partitions", m.handleClearPartitions)
 	mux.HandleFunc("POST /api/kv/set", m.handleSet)
@@ -130,6 +133,37 @@ func (m *Manager) handleDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusAccepted, result)
+}
+
+func (m *Manager) handleNodeKV(w http.ResponseWriter, r *http.Request) {
+	m.proxyNodePath(w, r, "/kv")
+}
+
+func (m *Manager) handleNodeLog(w http.ResponseWriter, r *http.Request) {
+	m.proxyNodePath(w, r, "/log")
+}
+
+func (m *Manager) proxyNodePath(w http.ResponseWriter, r *http.Request, path string) {
+	id := r.PathValue("id")
+	node, ok := m.nodeByName(id)
+	if !ok {
+		writeError(w, http.StatusNotFound, "node not found: "+id)
+		return
+	}
+	req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, "http://"+node.ControlAddr+path, nil)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	res, err := m.httpClient.Do(req)
+	if err != nil {
+		writeError(w, http.StatusBadGateway, err.Error())
+		return
+	}
+	defer res.Body.Close()
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(res.StatusCode)
+	_, _ = io.Copy(w, res.Body)
 }
 
 func (m *Manager) handleEvents(w http.ResponseWriter, r *http.Request) {
