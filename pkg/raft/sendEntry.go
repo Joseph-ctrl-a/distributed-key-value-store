@@ -222,6 +222,8 @@ func (n *Node) tryAdvanceCommitIndex() error {
 		}
 		return 0
 	})
+	// Sort ascending and take the element at position len - majority to get the
+	// highest index that at least a majority of nodes have matched.
 	candidateIndex := int32(indexes[len(indexes)-((len(indexes)/2)+1)])
 	if candidateIndex <= n.commitIndex || candidateIndex == 0 {
 		return nil
@@ -232,6 +234,8 @@ func (n *Node) tryAdvanceCommitIndex() error {
 	if err != nil {
 		return err
 	}
+	// Only commit entries from the current term. Entries from prior terms are
+	// committed indirectly once a current-term entry advances past them (Raft §5.4.2).
 	if candidateTerm == n.currentTerm {
 		oldCommitIndex := n.commitIndex
 		n.commitIndex = candidateIndex

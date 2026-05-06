@@ -1,9 +1,6 @@
 # Binaries for programs and plugins
 *.exe
-*.exe~
-*.dll
-*.so
-*.dylib
+
 
 # Test binary, built with `go test -c`
 *.test
@@ -12,8 +9,6 @@
 *.out
 coverage.*
 *.coverprofile
-profile.cov
-
 
 
 # Go workspace file
@@ -29,8 +24,4 @@ go.work.sum
 # Data directory (WAL and persistent state files)
 data/
 
-# Claude Code local tooling
-.claude/
 
-# Vite cache
-web/.vite/

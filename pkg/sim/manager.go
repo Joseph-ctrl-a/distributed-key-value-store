@@ -75,6 +75,8 @@ func WithHTTPClient(client *http.Client) Option {
 	return func(m *Manager) { m.httpClient = client }
 }
 
+// DefaultNodes uses explicit IPv4 addresses. On Windows, "localhost" resolves to
+// [::1] (IPv6) but Go's net.Listen binds to 127.0.0.1 (IPv4), causing connections to fail.
 func DefaultNodes() []NodeConfig {
 	return []NodeConfig{
 		{Name: "node1", RaftAddr: "127.0.0.1:5001", ControlAddr: "127.0.0.1:6001"},
