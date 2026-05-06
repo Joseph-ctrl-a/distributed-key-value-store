@@ -1,8 +1,9 @@
 package raft
 
 import (
-	"Distributed_Key_Value_Store/pkg/wal"
 	"encoding/json"
+	"errors"
+	"io"
 	"os"
 	"sync"
 )
@@ -15,13 +16,12 @@ type PersistentState struct {
 }
 
 // NewPersistentState loads existing state from disk if available, otherwise creates a fresh state file.
-func NewPersistentState() (state *PersistentState, err error) {
+func NewPersistentState(filePath string) (state *PersistentState, err error) {
 
 	var file *os.File
 	state = &PersistentState{}
 
-	filePath := "./data/votedFor.json"
-	if wal.FileExists(filePath) {
+	if _, statErr := os.Stat(filePath); statErr == nil {
 
 		file, err = os.OpenFile(filePath, os.O_RDWR, 0644)
 
@@ -30,11 +30,13 @@ func NewPersistentState() (state *PersistentState, err error) {
 		}
 
 		err = json.NewDecoder(file).Decode(state)
-		if err != nil {
+		if err != nil && !errors.Is(err, io.EOF) {
 			return nil, err
 		}
 		state.file = file
 
+	} else if !errors.Is(statErr, os.ErrNotExist) {
+		return nil, statErr
 	} else {
 		file, err = os.Create(filePath)
 

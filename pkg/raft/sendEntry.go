@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"slices"
 	"time"
 )
@@ -57,6 +58,9 @@ func (n *Node) sendAppendEntriesToFollower(request *transport.AppendEntriesReque
 	if peer == "" {
 		return errors.New("peer is empty")
 	}
+	if n.isPeerBlocked(peer) {
+		return fmt.Errorf("peer %q blocked by simulated network policy", peer)
+	}
 
 	n.mutex.RLock()
 	client, ok := n.clients[peer]
@@ -69,6 +73,11 @@ func (n *Node) sendAppendEntriesToFollower(request *transport.AppendEntriesReque
 	defer cancel()
 
 	response, err := client.AppendEntries(ctx, request)
+	if err != nil {
+		log.Printf("[replicate] node=%s peer=%s append failed entries=%d prevIndex=%d: %v", n.id, peer, len(request.Entries), request.PrevLogIndex, err)
+	} else {
+		log.Printf("[replicate] node=%s peer=%s append response success=%t term=%d entries=%d prevIndex=%d", n.id, peer, response.Success, response.Term, len(request.Entries), request.PrevLogIndex)
+	}
 	return n.handleAppendEntriesResult(&appendEntryResult{
 		peer:     peer,
 		request:  request,
@@ -112,6 +121,7 @@ func (n *Node) handleAppendEntriesResult(result *appendEntryResult) error {
 		if n.nextIndex[result.peer] > 1 {
 			n.nextIndex[result.peer]--
 		}
+		log.Printf("[replicate] node=%s peer=%s backtrack nextIndex=%d", n.id, result.peer, n.nextIndex[result.peer])
 		return nil
 	}
 
@@ -122,6 +132,7 @@ func (n *Node) handleAppendEntriesResult(result *appendEntryResult) error {
 	if nextIndex := matchIndex + 1; nextIndex > n.nextIndex[result.peer] {
 		n.nextIndex[result.peer] = nextIndex
 	}
+	log.Printf("[replicate] node=%s peer=%s matched=%d nextIndex=%d", n.id, result.peer, n.matchIndex[result.peer], n.nextIndex[result.peer])
 	return nil
 }
 
@@ -222,7 +233,9 @@ func (n *Node) tryAdvanceCommitIndex() error {
 		return err
 	}
 	if candidateTerm == n.currentTerm {
+		oldCommitIndex := n.commitIndex
 		n.commitIndex = candidateIndex
+		log.Printf("[commit] node=%s advanced commitIndex %d->%d", n.id, oldCommitIndex, n.commitIndex)
 	}
 
 	return nil
@@ -247,6 +260,7 @@ func (n *Node) applyCommittedEntries() error {
 			return err
 		}
 		n.lastApplied = int32(index)
+		log.Printf("[apply] node=%s applied index=%d", n.id, n.lastApplied)
 	}
 	return nil
 }
