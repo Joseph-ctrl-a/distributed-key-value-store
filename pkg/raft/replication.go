@@ -50,6 +50,7 @@ func (n *Node) handleHeartBeat(req *transport.AppendEntriesRequest) (res *transp
 		res.Term = n.currentTerm
 		res.Success = true
 		n.resetElectionTimer()
+		// Cap at our own log length — we may not have received all entries yet.
 		n.commitIndex = min(req.LeaderCommit, n.log.LastLogIndex())
 		if err := n.applyCommittedEntriesFromLog(); err != nil {
 			return res, err
