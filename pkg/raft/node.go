@@ -65,7 +65,7 @@ func (n *Node) init() error {
 	n.currentTerm = state.CurrentTerm
 	n.votedFor = state.VotedFor
 
-	n.electionTimer = time.NewTimer(time.Millisecond * time.Duration(n.RandomTime(150, 150)))
+	n.electionTimer = time.NewTimer(time.Millisecond * time.Duration(n.RandomTime(1500, 1500)))
 
 	n.startElectionTimer()
 

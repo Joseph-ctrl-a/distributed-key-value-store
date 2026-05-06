@@ -152,9 +152,9 @@ func (n *Node) startElectionTimer() {
 	}()
 }
 
-// resetElectionTimer resets the election timer to a new random duration between 150-300ms.
+// resetElectionTimer resets the election timer to a new random duration between 1500-3000ms.
 func (n *Node) resetElectionTimer() {
-	n.electionTimer.Reset(time.Millisecond * time.Duration(n.RandomTime(150, 150)))
+	n.electionTimer.Reset(time.Millisecond * time.Duration(n.RandomTime(1500, 1500)))
 }
 
 // RandomElectionTime returns a random election timeout between start and end milliseconds.
