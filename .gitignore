@@ -28,3 +28,9 @@ go.work.sum
 
 # Data directory (WAL and persistent state files)
 data/
+
+# Claude Code local tooling
+.claude/
+
+# Vite cache
+web/.vite/

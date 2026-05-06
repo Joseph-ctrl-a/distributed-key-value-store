@@ -1,0 +1,46 @@
+.panel {
+  padding: 8px 14px 12px;
+  flex-shrink: 0;
+}
+
+.sectionLabel {
+  font-size: 10px;
+  color: var(--green);
+  letter-spacing: 0.1em;
+  margin-bottom: 8px;
+}
+
+.presets {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.presets button {
+  flex: 1;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+}
+
+.isolateRow {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.isolateRow select {
+  flex: 1;
+}
+
+.state {
+  margin-top: 8px;
+  font-size: 10px;
+}
+
+.stateLabel {
+  color: var(--text-dim);
+}
+
+.stateVal {
+  color: var(--amber);
+}
