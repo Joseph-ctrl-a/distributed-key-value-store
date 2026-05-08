@@ -4,7 +4,7 @@ A distributed key-value store built from scratch on the Raft consensus algorithm
 
 ## Why I built this
 
-Coming from a background in CRUD APIs, I wanted to push further into backend development and understand how distributed systems actually work under the hood. Raft felt like the right place to start — it is a consensus algorithm specifically designed to be understandable, yet it still forces you to reason carefully about failure modes, race conditions, and state that has to survive crashes.
+Coming from a background in CRUD APIs, I wanted to push further into backend development and understand how distributed systems actually work under the hood. Raft felt like the right place to start. It is a consensus algorithm specifically designed to be understandable, yet it still forces you to reason carefully about failure modes, race conditions, and state that has to survive crashes.
 
 I chose Go deliberately. Beyond the project itself, I wanted real practice with a language that has built-in concurrency primitives and a strong type system, coming from JavaScript. Working through leader election, log replication, and network partition handling in Go made both the language and the distributed systems concepts stick in a way that reading about them never would.
 
