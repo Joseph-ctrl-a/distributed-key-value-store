@@ -57,7 +57,7 @@ func (p *PersistentState) writeCurrentState(term int32, votedFor string) (err er
 	defer p.mutex.Unlock()
 	p.updateState(term, votedFor)
 
-	state := make(map[string]interface{})
+	state := make(map[string]any)
 	state["votedFor"] = p.VotedFor
 	state["CurrentTerm"] = p.CurrentTerm
 
