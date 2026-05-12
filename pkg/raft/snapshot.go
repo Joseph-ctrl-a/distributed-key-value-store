@@ -3,6 +3,7 @@ package raft
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 )
 
@@ -24,14 +25,14 @@ func (n *Node) loadSnapshot(path string) (*Snapshot, error) {
 		return nil, nil
 	}
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("open snapshot file: %w", err)
 	}
 
 	defer file.Close()
 
 	var snapshot Snapshot
 	if err := json.NewDecoder(file).Decode(&snapshot); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("decode snapshot file: %w", err)
 	}
 	return &snapshot, nil
 }
@@ -55,25 +56,31 @@ func (n *Node) restoreSnapshot(snapshot *Snapshot) error {
 func (n *Node) restoreSnapshotFromDisk() error {
 	snapshotPath, err := n.snapshotPath()
 	if err != nil {
-		return err
+		return fmt.Errorf("snapshot path: %w", err)
 	}
 
 	snapshot, err := n.loadSnapshot(snapshotPath)
 	if err != nil {
-		return err
+		return fmt.Errorf("load snapshot: %w", err)
 	}
 
-	return n.restoreSnapshot(snapshot)
+	if err := n.restoreSnapshot(snapshot); err != nil {
+		return fmt.Errorf("restore snapshot: %w", err)
+	}
+	return nil
 }
 
 // saveSnapshot saves a snapshot to a given path
 func (n *Node) saveSnapshot(snapshot Snapshot, path string) error {
 	file, err := os.Create(path)
 	if err != nil {
-		return err
+		return fmt.Errorf("create snapshot file: %w", err)
 	}
 	defer file.Close()
-	json.NewEncoder(file).Encode(snapshot)
+
+	if err := json.NewEncoder(file).Encode(snapshot); err != nil {
+		return fmt.Errorf("encode snapshot: %w", err)
+	}
 	return nil
 }
 
@@ -82,7 +89,7 @@ func (n *Node) newSnapshot(index int32) (*Snapshot, error) {
 	term, err := n.log.GetTermAtIndex(index)
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get snapshot term at index %d: %w", index, err)
 	}
 
 	snapshot := &Snapshot{
@@ -95,34 +102,38 @@ func (n *Node) newSnapshot(index int32) (*Snapshot, error) {
 
 // shouldSnapshot checks whether its viable to snapshot
 func (n *Node) shouldSnapshot() bool {
+	n.mutex.RLock()
+	defer n.mutex.RUnlock()
 	return n.lastApplied-n.lastSnapshotIndex >= snapshotThreshold
 }
 
 // maybeSnapshot writes a snapshot when enough new entries have been applied.
 func (n *Node) maybeSnapshot() error {
-	if !n.shouldSnapshot() {
-		return nil
-	}
 	n.mutex.RLock()
+	shouldSnapshot := n.lastApplied-n.lastSnapshotIndex >= snapshotThreshold
 	lastApplied := n.lastApplied
 	n.mutex.RUnlock()
+
+	if !shouldSnapshot {
+		return nil
+	}
 
 	snapshot, err := n.newSnapshot(lastApplied)
 
 	if err != nil {
-		return err
+		return fmt.Errorf("create snapshot: %w", err)
 	}
 
 	path, err := n.snapshotPath()
 
 	if err != nil {
-		return err
+		return fmt.Errorf("snapshot path: %w", err)
 	}
 
 	err = n.saveSnapshot(*snapshot, path)
 
 	if err != nil {
-		return err
+		return fmt.Errorf("save snapshot: %w", err)
 	}
 	n.mutex.Lock()
 	n.lastSnapshotIndex = snapshot.LastIncludedIndex
