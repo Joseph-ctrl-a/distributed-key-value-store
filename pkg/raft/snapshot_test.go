@@ -272,3 +272,68 @@ func TestShouldSnapshot(t *testing.T) {
 		t.Fatal("expected shouldSnapshot=false until threshold entries after last snapshot")
 	}
 }
+
+func TestMaybeSnapshot(t *testing.T) {
+	t.Run("does nothing before threshold", func(t *testing.T) {
+		t.Chdir(t.TempDir())
+
+		n := newTestNodeWithEntries(t, int(snapshotThreshold))
+		n.id = "localhost:5001"
+		n.lastApplied = snapshotThreshold - 1
+		n.store.Set("a", "1")
+
+		if err := n.maybeSnapshot(); err != nil {
+			t.Fatal(err)
+		}
+
+		if n.lastSnapshotIndex != 0 {
+			t.Errorf("expected lastSnapshotIndex to remain 0, got %d", n.lastSnapshotIndex)
+		}
+
+		path, err := n.snapshotPath()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := os.Stat(path); !os.IsNotExist(err) {
+			t.Fatalf("expected no snapshot file, got err=%v", err)
+		}
+	})
+
+	t.Run("saves snapshot at threshold", func(t *testing.T) {
+		t.Chdir(t.TempDir())
+
+		n := newTestNodeWithEntries(t, int(snapshotThreshold))
+		n.id = "localhost:5001"
+		n.lastApplied = snapshotThreshold
+		n.store.Set("a", "1")
+
+		if err := n.maybeSnapshot(); err != nil {
+			t.Fatal(err)
+		}
+
+		if n.lastSnapshotIndex != snapshotThreshold {
+			t.Errorf("expected lastSnapshotIndex %d, got %d", snapshotThreshold, n.lastSnapshotIndex)
+		}
+
+		path, err := n.snapshotPath()
+		if err != nil {
+			t.Fatal(err)
+		}
+		got, err := n.loadSnapshot(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got == nil {
+			t.Fatal("expected snapshot to be saved")
+		}
+		if got.LastIncludedIndex != snapshotThreshold {
+			t.Errorf("expected snapshot index %d, got %d", snapshotThreshold, got.LastIncludedIndex)
+		}
+		if got.LastIncludedTerm != snapshotThreshold {
+			t.Errorf("expected snapshot term %d, got %d", snapshotThreshold, got.LastIncludedTerm)
+		}
+		if got.State["a"] != "1" {
+			t.Errorf("expected a=1, got state %#v", got.State)
+		}
+	})
+}

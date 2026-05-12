@@ -97,3 +97,35 @@ func (n *Node) newSnapshot(index int32) (*Snapshot, error) {
 func (n *Node) shouldSnapshot() bool {
 	return n.lastApplied-n.lastSnapshotIndex >= snapshotThreshold
 }
+
+// maybeSnapshot writes a snapshot when enough new entries have been applied.
+func (n *Node) maybeSnapshot() error {
+	if !n.shouldSnapshot() {
+		return nil
+	}
+	n.mutex.RLock()
+	lastApplied := n.lastApplied
+	n.mutex.RUnlock()
+
+	snapshot, err := n.newSnapshot(lastApplied)
+
+	if err != nil {
+		return err
+	}
+
+	path, err := n.snapshotPath()
+
+	if err != nil {
+		return err
+	}
+
+	err = n.saveSnapshot(*snapshot, path)
+
+	if err != nil {
+		return err
+	}
+	n.mutex.Lock()
+	n.lastSnapshotIndex = snapshot.LastIncludedIndex
+	n.mutex.Unlock()
+	return nil
+}
