@@ -73,3 +73,19 @@ func (n *Node) saveSnapshot(snapshot Snapshot, path string) error {
 	json.NewEncoder(file).Encode(snapshot)
 	return nil
 }
+
+// newSnapshot creates a new snapshot based off the current node state
+func (n *Node) newSnapshot(index int32) (*Snapshot, error) {
+	term, err := n.log.GetTermAtIndex(index)
+
+	if err != nil {
+		return nil, err
+	}
+
+	snapshot := &Snapshot{
+		LastIncludedIndex: index,
+		LastIncludedTerm:  term,
+		State:             n.store.All(),
+	}
+	return snapshot, nil
+}

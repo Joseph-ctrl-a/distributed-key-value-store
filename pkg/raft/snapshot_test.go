@@ -216,3 +216,39 @@ func TestSaveSnapshot(t *testing.T) {
 		t.Errorf("expected a=1, got state %#v", got.State)
 	}
 }
+
+func TestNewSnapshot(t *testing.T) {
+	t.Run("builds snapshot from log term and store state", func(t *testing.T) {
+		n := newTestNodeWithEntries(t, 3)
+		n.store.Set("a", "1")
+		n.store.Set("b", "2")
+
+		got, err := n.newSnapshot(2)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if got.LastIncludedIndex != 2 {
+			t.Errorf("expected index 2, got %d", got.LastIncludedIndex)
+		}
+		if got.LastIncludedTerm != 2 {
+			t.Errorf("expected term 2, got %d", got.LastIncludedTerm)
+		}
+		if got.State["a"] != "1" || got.State["b"] != "2" {
+			t.Errorf("unexpected snapshot state: %#v", got.State)
+		}
+
+		n.store.Set("a", "changed")
+		if got.State["a"] != "1" {
+			t.Errorf("expected snapshot state to be copied, got %q", got.State["a"])
+		}
+	})
+
+	t.Run("returns error for missing log index", func(t *testing.T) {
+		n := newTestNodeWithEntries(t, 1)
+
+		if _, err := n.newSnapshot(2); err == nil {
+			t.Fatal("expected error for missing log index")
+		}
+	})
+}
