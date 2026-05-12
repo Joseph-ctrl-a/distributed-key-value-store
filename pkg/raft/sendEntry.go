@@ -247,10 +247,11 @@ func (n *Node) tryAdvanceCommitIndex() error {
 
 func (n *Node) applyCommittedEntries() error {
 	n.mutex.Lock()
-	defer n.mutex.Unlock()
+
 	start := n.lastApplied + 1
 	entries, err := n.log.EntriesFromIndex(int(start))
 	if err != nil {
+		n.mutex.Unlock()
 		return err
 	}
 
@@ -261,10 +262,17 @@ func (n *Node) applyCommittedEntries() error {
 			break
 		}
 		if err := n.applyEntry(entry); err != nil {
+			n.mutex.Unlock()
 			return err
 		}
 		n.lastApplied = int32(index)
 		log.Printf("[apply] node=%s applied index=%d", n.id, n.lastApplied)
+	}
+
+	n.mutex.Unlock()
+
+	if err := n.maybeSnapshot(); err != nil {
+		return err
 	}
 	return nil
 }
