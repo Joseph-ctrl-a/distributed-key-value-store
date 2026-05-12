@@ -4,9 +4,6 @@ import (
 	"Distributed_Key_Value_Store/pkg/store"
 	"Distributed_Key_Value_Store/pkg/transport"
 	"Distributed_Key_Value_Store/pkg/wal"
-	"os"
-	"path/filepath"
-	"strings"
 	"sync"
 	"time"
 )
@@ -55,8 +52,13 @@ func (n *Node) init() error {
 	if err != nil {
 		return err
 	}
+	statePath, err := n.persistentStatePath()
 
-	state, err := NewPersistentState(n.persistentStatePath())
+	if err != nil {
+		return err
+	}
+
+	state, err := NewPersistentState(statePath)
 
 	if err != nil {
 		return err
@@ -73,11 +75,4 @@ func (n *Node) init() error {
 
 	return nil
 
-}
-
-func (n *Node) persistentStatePath() string {
-	idSanitized := strings.NewReplacer(":", "_", "/", "_", "\\", "_").Replace(n.id)
-	dataDir := filepath.Join("data", idSanitized)
-	_ = os.MkdirAll(dataDir, 0755)
-	return filepath.Join(dataDir, "state.json")
 }
