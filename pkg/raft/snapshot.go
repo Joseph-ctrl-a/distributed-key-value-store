@@ -7,11 +7,15 @@ import (
 )
 
 type Snapshot struct {
-	LastIncludedIndex int32             `json:"lastIncludedIndex"`
-	LastIncludedTerm  int32             `json:"lastIncludedTerm"`
-	State             map[string]string `json:"state"`
+	// LastIncludedIndex is the highest Raft log index represented by this snapshot.
+	LastIncludedIndex int32 `json:"lastIncludedIndex"`
+	// LastIncludedTerm is the term for LastIncludedIndex, used in log consistency checks.
+	LastIncludedTerm int32 `json:"lastIncludedTerm"`
+	// State is the key-value state machine contents at LastIncludedIndex.
+	State map[string]string `json:"state"`
 }
 
+// loadSnapshot reads the latest snapshot from disk, returning nil when none exists.
 func (n *Node) loadSnapshot(path string) (*Snapshot, error) {
 	file, err := os.Open(path)
 	if errors.Is(err, os.ErrNotExist) {
@@ -30,6 +34,7 @@ func (n *Node) loadSnapshot(path string) (*Snapshot, error) {
 	return &snapshot, nil
 }
 
+// restoreSnapshot installs a snapshot into the in-memory state machine.
 func (n *Node) restoreSnapshot(snapshot *Snapshot) error {
 	n.mutex.Lock()
 	defer n.mutex.Unlock()
