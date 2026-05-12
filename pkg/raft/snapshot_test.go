@@ -169,3 +169,50 @@ func TestRestoreSnapshotFromDisk(t *testing.T) {
 		t.Errorf("expected a=1, got %q ok=%t", got, ok)
 	}
 }
+
+func TestSaveSnapshot(t *testing.T) {
+	t.Chdir(t.TempDir())
+	n := newTestNode(t)
+	n.id = "localhost:5001"
+	n.store = store.NewHashMap()
+
+	path, err := n.snapshotPath()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := Snapshot{
+		LastIncludedIndex: 4,
+		LastIncludedTerm:  2,
+		State: map[string]string{
+			"a": "1",
+		},
+	}
+
+	err = n.saveSnapshot(want, path)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	file, err := os.Open(path)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+	var got Snapshot
+	if err := json.NewDecoder(file).Decode(&got); err != nil {
+		t.Fatal(err)
+	}
+
+	if got.LastIncludedIndex != want.LastIncludedIndex {
+		t.Errorf("expected index %d, got %d", want.LastIncludedIndex, got.LastIncludedIndex)
+	}
+	if got.LastIncludedTerm != want.LastIncludedTerm {
+		t.Errorf("expected term %d, got %d", want.LastIncludedTerm, got.LastIncludedTerm)
+	}
+	if got.State["a"] != "1" {
+		t.Errorf("expected a=1, got state %#v", got.State)
+	}
+}

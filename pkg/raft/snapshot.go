@@ -62,3 +62,14 @@ func (n *Node) restoreSnapshotFromDisk() error {
 
 	return n.restoreSnapshot(snapshot)
 }
+
+// saveSnapshot saves a snapshot to a given path
+func (n *Node) saveSnapshot(snapshot Snapshot, path string) error {
+	file, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	json.NewEncoder(file).Encode(snapshot)
+	return nil
+}
