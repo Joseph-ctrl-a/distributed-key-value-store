@@ -10,23 +10,24 @@ import (
 
 type Node struct {
 	transport.UnimplementedRaftServer
-	id              string
-	role            string
-	currentLeader   string
-	currentTerm     int32
-	votedFor        string
-	peers           []string
-	log             *wal.Wal
-	electionTimer   *time.Timer
-	clients         map[string]transport.RaftClient
-	persistentState *PersistentState
-	mutex           sync.RWMutex
-	commitIndex     int32
-	store           *store.HashMap
-	lastApplied     int32
-	nextIndex       map[string]int32
-	matchIndex      map[string]int32
-	blockedPeers    map[string]bool
+	id                string
+	role              string
+	currentLeader     string
+	currentTerm       int32
+	votedFor          string
+	peers             []string
+	log               *wal.Wal
+	electionTimer     *time.Timer
+	clients           map[string]transport.RaftClient
+	persistentState   *PersistentState
+	mutex             sync.RWMutex
+	commitIndex       int32
+	store             *store.HashMap
+	lastApplied       int32
+	nextIndex         map[string]int32
+	matchIndex        map[string]int32
+	blockedPeers      map[string]bool
+	lastSnapshotIndex int32
 }
 
 // NewNode defines how a Node should look

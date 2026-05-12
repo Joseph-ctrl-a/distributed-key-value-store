@@ -6,6 +6,8 @@ import (
 	"os"
 )
 
+const snapshotThreshold int32 = 5
+
 type Snapshot struct {
 	// LastIncludedIndex is the highest Raft log index represented by this snapshot.
 	LastIncludedIndex int32 `json:"lastIncludedIndex"`
@@ -45,6 +47,7 @@ func (n *Node) restoreSnapshot(snapshot *Snapshot) error {
 	n.store.ReplaceAll(snapshot.State)
 	n.commitIndex = snapshot.LastIncludedIndex
 	n.lastApplied = snapshot.LastIncludedIndex
+	n.lastSnapshotIndex = n.commitIndex
 	return nil
 }
 
@@ -88,4 +91,9 @@ func (n *Node) newSnapshot(index int32) (*Snapshot, error) {
 		State:             n.store.All(),
 	}
 	return snapshot, nil
+}
+
+// shouldSnapshot checks whether its viable to snapshot
+func (n *Node) shouldSnapshot() bool {
+	return n.lastApplied-n.lastSnapshotIndex >= snapshotThreshold
 }

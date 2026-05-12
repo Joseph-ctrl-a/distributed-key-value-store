@@ -252,3 +252,23 @@ func TestNewSnapshot(t *testing.T) {
 		}
 	})
 }
+
+func TestShouldSnapshot(t *testing.T) {
+	n := newTestNode(t)
+
+	n.lastApplied = snapshotThreshold - 1
+	if n.shouldSnapshot() {
+		t.Fatal("expected shouldSnapshot=false before threshold")
+	}
+
+	n.lastApplied = snapshotThreshold
+	if !n.shouldSnapshot() {
+		t.Fatal("expected shouldSnapshot=true at threshold")
+	}
+
+	n.lastSnapshotIndex = snapshotThreshold
+	n.lastApplied = snapshotThreshold + 1
+	if n.shouldSnapshot() {
+		t.Fatal("expected shouldSnapshot=false until threshold entries after last snapshot")
+	}
+}
