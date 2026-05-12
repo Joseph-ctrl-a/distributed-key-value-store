@@ -47,3 +47,18 @@ func (n *Node) restoreSnapshot(snapshot *Snapshot) error {
 	n.lastApplied = snapshot.LastIncludedIndex
 	return nil
 }
+
+// restoreSnapshotFromDisk takes the current snapshot and applies it.
+func (n *Node) restoreSnapshotFromDisk() error {
+	snapshotPath, err := n.snapshotPath()
+	if err != nil {
+		return err
+	}
+
+	snapshot, err := n.loadSnapshot(snapshotPath)
+	if err != nil {
+		return err
+	}
+
+	return n.restoreSnapshot(snapshot)
+}

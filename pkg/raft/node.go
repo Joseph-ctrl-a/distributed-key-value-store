@@ -72,6 +72,9 @@ func (n *Node) init() error {
 	n.startElectionTimer()
 
 	n.store = store.NewHashMap()
+	if err := n.restoreSnapshotFromDisk(); err != nil {
+		return err
+	}
 
 	return nil
 

@@ -1,6 +1,7 @@
 package raft
 
 import (
+	"Distributed_Key_Value_Store/pkg/store"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -119,4 +120,52 @@ func TestRestoreSnapshot(t *testing.T) {
 			t.Errorf("expected x=10, got %q ok=%t", got, ok)
 		}
 	})
+}
+
+func TestRestoreSnapshotFromDisk(t *testing.T) {
+	t.Chdir(t.TempDir())
+
+	n := newTestNode(t)
+	n.id = "localhost:5001"
+	n.store = store.NewHashMap()
+
+	path, err := n.snapshotPath()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	snapshot := Snapshot{
+		LastIncludedIndex: 4,
+		LastIncludedTerm:  2,
+		State: map[string]string{
+			"a": "1",
+		},
+	}
+
+	file, err := os.Create(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := json.NewEncoder(file).Encode(snapshot); err != nil {
+		t.Fatal(err)
+	}
+	if err := file.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := n.restoreSnapshotFromDisk(); err != nil {
+		t.Fatal(err)
+	}
+
+	if n.commitIndex != 4 {
+		t.Errorf("expected commitIndex 4, got %d", n.commitIndex)
+	}
+	if n.lastApplied != 4 {
+		t.Errorf("expected lastApplied 4, got %d", n.lastApplied)
+	}
+
+	got, ok := n.store.Get("a")
+	if !ok || got != "1" {
+		t.Errorf("expected a=1, got %q ok=%t", got, ok)
+	}
 }
