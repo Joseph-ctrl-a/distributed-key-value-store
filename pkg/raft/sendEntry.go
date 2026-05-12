@@ -252,7 +252,7 @@ func (n *Node) applyCommittedEntries() error {
 	entries, err := n.log.EntriesFromIndex(int(start))
 	if err != nil {
 		n.mutex.Unlock()
-		return err
+		return fmt.Errorf("get entries from index %d: %w", start, err)
 	}
 
 	for i, entry := range entries {
@@ -263,7 +263,7 @@ func (n *Node) applyCommittedEntries() error {
 		}
 		if err := n.applyEntry(entry); err != nil {
 			n.mutex.Unlock()
-			return err
+			return fmt.Errorf("apply entry at index %d: %w", index, err)
 		}
 		n.lastApplied = int32(index)
 		log.Printf("[apply] node=%s applied index=%d", n.id, n.lastApplied)
@@ -272,7 +272,7 @@ func (n *Node) applyCommittedEntries() error {
 	n.mutex.Unlock()
 
 	if err := n.maybeSnapshot(); err != nil {
-		return err
+		return fmt.Errorf("maybe snapshot after applying leader entries: %w", err)
 	}
 	return nil
 }

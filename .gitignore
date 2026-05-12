@@ -9,6 +9,7 @@
 *.out
 coverage.*
 *.coverprofile
+.gocache/
 
 
 # Go workspace file
