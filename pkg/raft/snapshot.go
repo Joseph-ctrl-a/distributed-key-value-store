@@ -12,7 +12,7 @@ type Snapshot struct {
 	State             map[string]string `json:"state"`
 }
 
-func loadSnapShot(path string) (*Snapshot, error) {
+func (n *Node) loadSnapshot(path string) (*Snapshot, error) {
 	file, err := os.Open(path)
 	if errors.Is(err, os.ErrNotExist) {
 		return nil, nil
@@ -28,4 +28,17 @@ func loadSnapShot(path string) (*Snapshot, error) {
 		return nil, err
 	}
 	return &snapshot, nil
+}
+
+func (n *Node) restoreSnapshot(snapshot *Snapshot) error {
+	n.mutex.Lock()
+	defer n.mutex.Unlock()
+	if snapshot == nil {
+		return nil
+	}
+
+	n.store.ReplaceAll(snapshot.State)
+	n.commitIndex = snapshot.LastIncludedIndex
+	n.lastApplied = snapshot.LastIncludedIndex
+	return nil
 }

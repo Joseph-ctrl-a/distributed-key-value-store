@@ -1,6 +1,7 @@
 package store
 
 import (
+	"maps"
 	"sync"
 )
 
@@ -56,10 +57,16 @@ func (h *HashMap) All() map[string]string {
 	h.mutex.RLock()
 	defer h.mutex.RUnlock()
 	out := make(map[string]string, len(h.data))
-	for k, v := range h.data {
-		out[k] = v
-	}
+	maps.Copy(out, h.data)
 	return out
+}
+
+func (h *HashMap) ReplaceAll(data map[string]string) {
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
+
+	h.data = make(map[string]string, len(data))
+	maps.Copy(h.data, data)
 }
 
 // Has checks if a given exists, blocks any writes during this. Returns a boolean.

@@ -228,3 +228,31 @@ func TestConcurrentMixed(t *testing.T) {
 
 	wg.Wait()
 }
+
+func TestReplaceAll(t *testing.T) {
+	h := NewHashMap()
+	h.Set("old", "value")
+
+	source := map[string]string{
+		"a": "1",
+		"b": "2",
+	}
+
+	h.ReplaceAll(source)
+
+	if h.Has("old") {
+		t.Error("expected ReplaceAll to remove old keys")
+	}
+
+	got, ok := h.Get("a")
+	if !ok || got != "1" {
+		t.Errorf("expected a=1, got %q ok=%t", got, ok)
+	}
+
+	source["a"] = "changed"
+
+	got, ok = h.Get("a")
+	if !ok || got != "1" {
+		t.Errorf("expected store to copy input map, got %q ok=%t", got, ok)
+	}
+}
