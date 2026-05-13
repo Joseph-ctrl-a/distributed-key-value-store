@@ -30,9 +30,9 @@ func (n *Node) startElection() error {
 	if err != nil {
 		return err
 	}
-	lastLogIndex := n.log.LastLogIndex()
+	lastLogIndex := n.lastLogIndex()
 
-	lastLogTerm, err := n.log.LastLogTerm()
+	lastLogTerm, err := n.lastLogTerm()
 
 	if err != nil {
 		return err

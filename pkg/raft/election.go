@@ -15,6 +15,12 @@ func (n *Node) RequestVote(c context.Context, req *transport.RequestVoteRequest)
 		return nil, status.Error(codes.Unavailable, "peer blocked by simulated network policy")
 	}
 
+	lastLogTerm, err := n.lastLogTerm()
+	if err != nil {
+		return nil, err
+	}
+	lastLogIndex := n.lastLogIndex()
+
 	n.mutex.Lock()
 	defer n.mutex.Unlock()
 	res = &transport.RequestVoteResponse{}
@@ -33,12 +39,6 @@ func (n *Node) RequestVote(c context.Context, req *transport.RequestVoteRequest)
 		}
 	}
 
-	lastLogTerm, err := n.log.LastLogTerm()
-
-	if err != nil {
-		return nil, err
-	}
-
 	if n.votedFor == req.CandidateId {
 		err = n.voteForCandidate(req, res)
 		if err != nil {
@@ -53,7 +53,7 @@ func (n *Node) RequestVote(c context.Context, req *transport.RequestVoteRequest)
 	}
 
 	if lastLogTerm == req.LastLogTerm {
-		if req.LastLogIndex >= n.log.LastLogIndex() {
+		if req.LastLogIndex >= lastLogIndex {
 			err = n.voteForCandidate(req, res)
 			if err != nil {
 				return &transport.RequestVoteResponse{}, err
