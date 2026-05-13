@@ -51,7 +51,7 @@ func TestControlWriteRejectsNonLeader(t *testing.T) {
 	if rec.Code != http.StatusConflict {
 		t.Fatalf("expected status 409, got %d body=%s", rec.Code, rec.Body.String())
 	}
-	if got := n.log.LastLogIndex(); got != 0 {
+	if got := n.lastLogIndex(); got != 0 {
 		t.Errorf("expected non-leader write not to append, got log index %d", got)
 	}
 }
@@ -68,7 +68,7 @@ func TestControlWriteAppendsOnLeader(t *testing.T) {
 	if rec.Code != http.StatusAccepted {
 		t.Fatalf("expected status 202, got %d body=%s", rec.Code, rec.Body.String())
 	}
-	if got := n.log.LastLogIndex(); got != 1 {
+	if got := n.lastLogIndex(); got != 1 {
 		t.Errorf("expected leader write to append at index 1, got %d", got)
 	}
 }

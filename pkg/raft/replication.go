@@ -31,14 +31,13 @@ func (n *Node) handleHeartBeat(req *transport.AppendEntriesRequest) (res *transp
 	n.mutex.RLock()
 	currentTerm := n.currentTerm
 	n.mutex.RUnlock()
-
 	if req.Term > currentTerm {
 		err = n.stepDown(req.Term)
 		if err != nil {
 			return res, fmt.Errorf("step down on heartbeat: %w", err)
 		}
 	}
-
+	lastLogIndex := n.lastLogIndex()
 	shouldApply := false
 	n.mutex.Lock()
 	if req.Term < n.currentTerm {
@@ -50,7 +49,7 @@ func (n *Node) handleHeartBeat(req *transport.AppendEntriesRequest) (res *transp
 		res.Success = true
 		n.resetElectionTimer()
 		// Cap at our own log length — we may not have received all entries yet.
-		n.commitIndex = min(req.LeaderCommit, n.log.LastLogIndex())
+		n.commitIndex = min(req.LeaderCommit, lastLogIndex)
 		shouldApply = true
 		log.Printf("[append] node=%s accepted heartbeat leader=%s term=%d commit=%d", n.id, req.LeaderId, req.Term, req.LeaderCommit)
 	}
@@ -91,6 +90,9 @@ func (n *Node) handleEntry(req *transport.AppendEntriesRequest) (res *transport.
 	}
 
 	n.mutex.Lock()
+	snapshotIndex := n.lastSnapshotIndex
+	snapshotTerm := n.lastSnapshotTerm
+	lastLogIndex := snapshotIndex + n.log.LastLogIndex()
 	// 2. Check if sending term is less than ours
 	if req.Term < n.currentTerm {
 		log.Printf("[append] node=%s rejected entries leader=%s reqTerm=%d currentTerm=%d", n.id, req.LeaderId, req.Term, n.currentTerm)
@@ -99,14 +101,27 @@ func (n *Node) handleEntry(req *transport.AppendEntriesRequest) (res *transport.
 		return Failure(term)
 	}
 
+	if req.PrevLogIndex < snapshotIndex {
+		log.Printf("[append] node=%s rejected entries leader=%s compactedPrevIndex=%d snapshotIndex=%d", n.id, req.LeaderId, req.PrevLogIndex, snapshotIndex)
+		term := n.currentTerm
+		n.mutex.Unlock()
+		return Failure(term)
+	}
+
 	// 3. Check if term at index match
 	if req.PrevLogIndex != 0 {
-		termAtIndex, err := n.log.GetTermAtIndex(req.PrevLogIndex)
-		if err != nil {
-			log.Printf("[append] node=%s rejected entries leader=%s missingPrevIndex=%d", n.id, req.LeaderId, req.PrevLogIndex)
-			term := n.currentTerm
-			n.mutex.Unlock()
-			return Failure(term)
+		var termAtIndex int32
+		if req.PrevLogIndex == snapshotIndex {
+			termAtIndex = snapshotTerm
+		} else {
+			var err error
+			termAtIndex, err = n.log.GetTermAtIndex(req.PrevLogIndex - snapshotIndex)
+			if err != nil {
+				log.Printf("[append] node=%s rejected entries leader=%s missingPrevIndex=%d", n.id, req.LeaderId, req.PrevLogIndex)
+				term := n.currentTerm
+				n.mutex.Unlock()
+				return Failure(term)
+			}
 		}
 		if termAtIndex != req.PrevLogTerm {
 			log.Printf("[append] node=%s rejected entries leader=%s prevIndex=%d localTerm=%d leaderTerm=%d", n.id, req.LeaderId, req.PrevLogIndex, termAtIndex, req.PrevLogTerm)
@@ -117,8 +132,8 @@ func (n *Node) handleEntry(req *transport.AppendEntriesRequest) (res *transport.
 	}
 
 	// 4. Check If theres extra entries in your log
-	if n.log.LastLogIndex() > req.PrevLogIndex {
-		err := n.log.SpliceInPlace(req.PrevLogIndex)
+	if lastLogIndex > req.PrevLogIndex {
+		err := n.log.SpliceInPlace(req.PrevLogIndex - snapshotIndex)
 		if err != nil {
 			n.mutex.Unlock()
 			return Error(fmt.Errorf("truncate conflicting log entries: %w", err))
@@ -140,11 +155,12 @@ func (n *Node) handleEntry(req *transport.AppendEntriesRequest) (res *transport.
 
 	}
 	// 6. Advance the commit and update your own
-	n.commitIndex = min(req.LeaderCommit, n.log.LastLogIndex())
+	lastLogIndex = snapshotIndex + n.log.LastLogIndex()
+	n.commitIndex = min(req.LeaderCommit, lastLogIndex)
 	responseTerm := n.currentTerm
 
 	// 7. Apply entries
-	log.Printf("[append] node=%s accepted entries leader=%s count=%d lastIndex=%d commit=%d", n.id, req.LeaderId, len(req.Entries), n.log.LastLogIndex(), n.commitIndex)
+	log.Printf("[append] node=%s accepted entries leader=%s count=%d lastIndex=%d commit=%d", n.id, req.LeaderId, len(req.Entries), lastLogIndex, n.commitIndex)
 	n.mutex.Unlock()
 
 	if err := n.applyCommittedEntriesFromLog(); err != nil {
@@ -160,7 +176,7 @@ func (n *Node) applyCommittedEntriesFromLog() error {
 		defer n.mutex.Unlock()
 
 		return n.log.ForEach(func(i int, entry string) error {
-			index := int32(i + 1)
+			index := n.lastSnapshotIndex + int32(i+1)
 			if index <= n.commitIndex && index > n.lastApplied {
 				if err := n.applyEntry(entry); err != nil {
 					return fmt.Errorf("apply entry at index %d: %w", index, err)

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log"
+	"maps"
 	"net/http"
 	"strings"
 )
@@ -61,7 +62,7 @@ func (n *Node) Status() NodeStatus {
 	}
 	n.mutex.RUnlock()
 
-	status.LastLogIndex = n.log.LastLogIndex()
+	status.LastLogIndex = n.lastLogIndex()
 	return status
 }
 
@@ -96,7 +97,7 @@ func (n *Node) SubmitSet(key, value string) (WriteResult, error) {
 	if err := n.log.Append(wal.NewLogEntry("SET", []string{key, value}, int(term))); err != nil {
 		return WriteResult{}, err
 	}
-	return WriteResult{Index: n.log.LastLogIndex(), Term: term}, nil
+	return WriteResult{Index: n.lastLogIndex(), Term: term}, nil
 }
 
 func (n *Node) SubmitDelete(key string) (WriteResult, error) {
@@ -116,7 +117,7 @@ func (n *Node) SubmitDelete(key string) (WriteResult, error) {
 	if err := n.log.Append(wal.NewLogEntry("DELETE", []string{key}, int(term))); err != nil {
 		return WriteResult{}, err
 	}
-	return WriteResult{Index: n.log.LastLogIndex(), Term: term}, nil
+	return WriteResult{Index: n.lastLogIndex(), Term: term}, nil
 }
 
 func (n *Node) ControlHandler() http.Handler {
@@ -201,7 +202,11 @@ type logEntryView struct {
 }
 
 func (n *Node) handleDumpLog(w http.ResponseWriter, r *http.Request) {
-	entries, err := n.log.EntriesFromIndex(1)
+	n.mutex.RLock()
+	startIndex := n.lastSnapshotIndex + 1
+	n.mutex.RUnlock()
+
+	entries, err := n.entriesFromIndex(startIndex)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -213,7 +218,7 @@ func (n *Node) handleDumpLog(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		views = append(views, logEntryView{
-			Index:  i + 1,
+			Index:  int(startIndex) + i,
 			Term:   entry.Term,
 			Method: entry.MethodName,
 			Params: entry.Params,
@@ -230,9 +235,7 @@ func (n *Node) isPeerBlocked(peer string) bool {
 
 func copyInt32Map(src map[string]int32) map[string]int32 {
 	dst := make(map[string]int32, len(src))
-	for k, v := range src {
-		dst[k] = v
-	}
+	maps.Copy(dst, src)
 	return dst
 }
 

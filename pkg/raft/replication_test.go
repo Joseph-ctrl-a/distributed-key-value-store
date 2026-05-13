@@ -72,8 +72,8 @@ func TestHandleEntry(t *testing.T) {
 		if !res.Success {
 			t.Errorf("expected success for valid append, got failure (term=%d)", res.Term)
 		}
-		if n.log.LastLogIndex() != 4 {
-			t.Errorf("expected 4 entries after append, got %d", n.log.LastLogIndex())
+		if n.lastLogIndex() != 4 {
+			t.Errorf("expected 4 entries after append, got %d", n.lastLogIndex())
 		}
 		if n.commitIndex != 4 {
 			t.Errorf("expected commitIndex 4, got %d", n.commitIndex)

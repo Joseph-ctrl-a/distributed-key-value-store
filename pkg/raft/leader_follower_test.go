@@ -30,7 +30,7 @@ func TestLeaderReplicatesCommittedEntryToFollower(t *testing.T) {
 		t.Fatalf("expected follower to accept append entries, got success=false term=%d", res.Term)
 	}
 
-	if got := follower.log.LastLogIndex(); got != 1 {
+	if got := follower.lastLogIndex(); got != 1 {
 		t.Errorf("expected follower log index 1, got %d", got)
 	}
 	if follower.commitIndex != 1 {
@@ -72,7 +72,7 @@ func TestLeaderCatchesUpFollowerFromPartialLog(t *testing.T) {
 		t.Fatalf("expected follower to accept catch-up append, got success=false term=%d", res.Term)
 	}
 
-	if got := follower.log.LastLogIndex(); got != 3 {
+	if got := follower.lastLogIndex(); got != 3 {
 		t.Errorf("expected follower log index 3, got %d", got)
 	}
 	if follower.commitIndex != 3 {
@@ -100,7 +100,7 @@ func TestFollowerRejectsMismatchedPreviousLog(t *testing.T) {
 	if res.Success {
 		t.Fatal("expected follower to reject append with mismatched previous log term")
 	}
-	if got := follower.log.LastLogIndex(); got != 2 {
+	if got := follower.lastLogIndex(); got != 2 {
 		t.Errorf("expected follower log to remain at index 2, got %d", got)
 	}
 }
@@ -159,7 +159,7 @@ func TestLeaderBacktracksAndRetriesFollowerReplication(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if got := follower.log.LastLogIndex(); got != 3 {
+	if got := follower.lastLogIndex(); got != 3 {
 		t.Errorf("expected follower log index 3 after retry, got %d", got)
 	}
 	if got := leader.matchIndex["follower"]; got != 3 {

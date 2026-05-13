@@ -87,7 +87,7 @@ func (n *Node) saveSnapshot(snapshot Snapshot, path string) error {
 
 // newSnapshot creates a new snapshot based off the current node state
 func (n *Node) newSnapshot(index int32) (*Snapshot, error) {
-	term, err := n.log.GetTermAtIndex(index)
+	term, err := n.termAtIndex(index)
 
 	if err != nil {
 		return nil, fmt.Errorf("get snapshot term at index %d: %w", index, err)
