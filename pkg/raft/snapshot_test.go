@@ -88,6 +88,9 @@ func TestRestoreSnapshot(t *testing.T) {
 		if n.commitIndex != 2 || n.lastApplied != 2 {
 			t.Errorf("expected indexes unchanged, got commit=%d applied=%d", n.commitIndex, n.lastApplied)
 		}
+		if n.lastSnapshotTerm != 0 {
+			t.Errorf("expected term unchanged, got %d", n.lastSnapshotTerm)
+		}
 	})
 
 	t.Run("restores store and raft indexes", func(t *testing.T) {

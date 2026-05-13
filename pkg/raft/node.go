@@ -28,6 +28,7 @@ type Node struct {
 	matchIndex        map[string]int32
 	blockedPeers      map[string]bool
 	lastSnapshotIndex int32
+	lastSnapshotTerm  int32
 }
 
 // NewNode defines how a Node should look

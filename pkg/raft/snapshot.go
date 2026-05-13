@@ -48,7 +48,8 @@ func (n *Node) restoreSnapshot(snapshot *Snapshot) error {
 	n.store.ReplaceAll(snapshot.State)
 	n.commitIndex = snapshot.LastIncludedIndex
 	n.lastApplied = snapshot.LastIncludedIndex
-	n.lastSnapshotIndex = n.commitIndex
+	n.lastSnapshotIndex = snapshot.LastIncludedIndex
+	n.lastSnapshotTerm = snapshot.LastIncludedTerm
 	return nil
 }
 
@@ -137,6 +138,7 @@ func (n *Node) maybeSnapshot() error {
 	}
 	n.mutex.Lock()
 	n.lastSnapshotIndex = snapshot.LastIncludedIndex
+	n.lastSnapshotTerm = snapshot.LastIncludedTerm
 	n.mutex.Unlock()
 	return nil
 }
