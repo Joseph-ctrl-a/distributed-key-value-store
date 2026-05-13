@@ -154,11 +154,11 @@ func (n *Node) deepCopyPeers() []string {
 }
 
 func (n *Node) initLeaderState() {
+	lastLogIndex := n.lastLogIndex()
+
 	n.mutex.Lock()
 	n.nextIndex = make(map[string]int32)
 	n.matchIndex = make(map[string]int32)
-
-	lastLogIndex := n.log.LastLogIndex()
 
 	for _, peer := range n.peers {
 		n.nextIndex[peer] = lastLogIndex + 1
@@ -183,13 +183,13 @@ func (n *Node) newAppendEntriesRequest(peerId string) (*transport.AppendEntriesR
 	var prevLogTerm int32
 	if prevLogIndex > 0 {
 		var err error
-		prevLogTerm, err = n.log.GetTermAtIndex(prevLogIndex)
+		prevLogTerm, err = n.termAtIndex(prevLogIndex)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	entries, err := n.log.EntriesFromIndex(int(nextPeerIndex))
+	entries, err := n.entriesFromIndex(nextPeerIndex)
 	if err != nil {
 		return nil, err
 	}
@@ -208,7 +208,9 @@ func (n *Node) tryAdvanceCommitIndex() error {
 	n.mutex.Lock()
 	defer n.mutex.Unlock()
 	indexes := []int{}
-	indexes = append(indexes, int(n.log.LastLogIndex()))
+	snapshotIndex := n.lastSnapshotIndex
+	snapshotTerm := n.lastSnapshotTerm
+	indexes = append(indexes, int(snapshotIndex+n.log.LastLogIndex()))
 
 	for _, peer := range n.peers {
 		indexes = append(indexes, int(n.matchIndex[peer]))
@@ -229,10 +231,15 @@ func (n *Node) tryAdvanceCommitIndex() error {
 		return nil
 	}
 
-	candidateTerm, err := n.log.GetTermAtIndex(candidateIndex)
-
-	if err != nil {
-		return err
+	var candidateTerm int32
+	if candidateIndex == snapshotIndex {
+		candidateTerm = snapshotTerm
+	} else {
+		var err error
+		candidateTerm, err = n.log.GetTermAtIndex(candidateIndex - snapshotIndex)
+		if err != nil {
+			return err
+		}
 	}
 	// Only commit entries from the current term. Entries from prior terms are
 	// committed indirectly once a current-term entry advances past them (Raft §5.4.2).
@@ -249,7 +256,12 @@ func (n *Node) applyCommittedEntries() error {
 	n.mutex.Lock()
 
 	start := n.lastApplied + 1
-	entries, err := n.log.EntriesFromIndex(int(start))
+	localStart := start - n.lastSnapshotIndex
+	if localStart <= 0 {
+		n.mutex.Unlock()
+		return fmt.Errorf("get entries from index %d: log index compacted into snapshot at index %d", start, n.lastSnapshotIndex)
+	}
+	entries, err := n.log.EntriesFromIndex(int(localStart))
 	if err != nil {
 		n.mutex.Unlock()
 		return fmt.Errorf("get entries from index %d: %w", start, err)

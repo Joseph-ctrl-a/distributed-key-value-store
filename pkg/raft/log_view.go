@@ -35,3 +35,15 @@ func (n *Node) termAtIndex(index int32) (int32, error) {
 
 	return n.log.GetTermAtIndex(index - snapshotIndex)
 }
+
+func (n *Node) entriesFromIndex(index int32) ([]string, error) {
+	n.mutex.RLock()
+	snapshotIndex := n.lastSnapshotIndex
+	n.mutex.RUnlock()
+
+	if index <= snapshotIndex {
+		return nil, fmt.Errorf("log index %d compacted into snapshot at index %d", index, snapshotIndex)
+	}
+
+	return n.log.EntriesFromIndex(int(index - snapshotIndex))
+}
