@@ -13,7 +13,8 @@ func FileExists(filepath string) bool {
 	return !errors.Is(err, os.ErrNotExist)
 }
 
-// Parse splits a formatted WAL entry string into its components.
+// Parse splits a raw WAL record into command name, params, and term.
+// Expected format is METHOD:param1,param2:term.
 func Parse(s string) (*entryParsed, error) {
 	entrySplice := strings.Split(s, ":")
 	methodName := entrySplice[0]
@@ -25,7 +26,7 @@ func Parse(s string) (*entryParsed, error) {
 	return &entryParsed{MethodName: methodName, MethodParams: methodParams, Term: int32(logTerm)}, nil
 }
 
-// ParseToLogEntry parses a formatted WAL entry string into a LogEntry.
+// ParseToLogEntry converts a raw WAL record back into a LogEntry.
 func ParseToLogEntry(s string) (*LogEntry, error) {
 	parsedEntry, err := Parse(s)
 	if err != nil {
@@ -34,7 +35,7 @@ func ParseToLogEntry(s string) (*LogEntry, error) {
 	return NewLogEntry(parsedEntry.MethodName, parsedEntry.MethodParams, int(parsedEntry.Term)), nil
 }
 
-// entryParsed holds the raw parsed fields from a WAL entry string.
+// entryParsed holds the parsed fields from a raw WAL record.
 type entryParsed struct {
 	MethodName   string
 	MethodParams []string

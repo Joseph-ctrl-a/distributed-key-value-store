@@ -5,19 +5,20 @@ import (
 	"strings"
 )
 
-// LogEntry defines the structure of a how a log inside the WAL should look
+// LogEntry is the in-memory representation of one command stored in the WAL.
+// The entry is persisted as METHOD:param1,param2:term.
 type LogEntry struct {
 	MethodName string
 	Params     []string
 	Term       int
 }
 
-// NewLogEntry Creates a new LogEntry returning its memory address
+// NewLogEntry creates a LogEntry for a state-machine command at a Raft term.
 func NewLogEntry(methodName string, params []string, term int) *LogEntry {
 	return &LogEntry{MethodName: methodName, Params: params, Term: term}
 }
 
-// FormatEntry formats the LogEntry into a standard format.
+// FormatEntry serializes a LogEntry as one newline-terminated WAL record.
 func (l *LogEntry) FormatEntry() string {
 	return l.MethodName + ":" + strings.Join(l.Params, ",") + ":" + strconv.Itoa(l.Term) + "\n"
 }
