@@ -1,6 +1,7 @@
 package wal
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -286,13 +287,13 @@ func TestGetTermAtIndex(t *testing.T) {
 	}
 }
 
-// --- SpliceInPlace ---
+// --- TruncateAfter ---
 
-func TestSpliceInPlace(t *testing.T) {
+func TestTruncateAfter(t *testing.T) {
 	t.Run("splice truncates past index", func(t *testing.T) {
 		w := writeTestEntries(t)
 
-		if err := w.SpliceInPlace(5); err != nil {
+		if err := w.TruncateAfter(5); err != nil {
 			t.Fatal(err)
 		}
 
@@ -317,7 +318,7 @@ func TestSpliceInPlace(t *testing.T) {
 	t.Run("splice at index 1 keeps only first entry", func(t *testing.T) {
 		w := writeTestEntries(t)
 
-		if err := w.SpliceInPlace(1); err != nil {
+		if err := w.TruncateAfter(1); err != nil {
 			t.Fatal(err)
 		}
 
@@ -391,4 +392,121 @@ func TestNewWalPreservesExistingContent(t *testing.T) {
 	if string(content) != "SET:k,v:1\n" {
 		t.Errorf("expected preserved content after reopen, got %q", string(content))
 	}
+}
+
+func TestCompactPrefix(t *testing.T) {
+	t.Run("compacts entries up to index", func(t *testing.T) {
+		w := newTestWal(t)
+
+		for i := range 10 {
+			key := fmt.Sprintf("key%d", i+1)
+			if err := w.Append(NewLogEntry("SET", []string{key, strconv.Itoa(i + 1)}, i+1)); err != nil {
+				t.Fatal(err)
+			}
+		}
+
+		if err := w.CompactPrefix(5); err != nil {
+			t.Fatal(err)
+		}
+
+		if got := w.LastLogIndex(); got != 5 {
+			t.Errorf("expected LastLogIndex 5 after compaction, got %d", got)
+		}
+
+		term, err := w.LastLogTerm()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if term != 10 {
+			t.Errorf("expected LastLogTerm 10 after compaction, got %d", term)
+		}
+
+		var entries []string
+		if err := w.ForEach(func(_ int, entry string) error {
+			entries = append(entries, entry)
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+
+		if len(entries) != 5 {
+			t.Fatalf("expected 5 entries after compaction, got %d", len(entries))
+		}
+
+		for i, raw := range entries {
+			entry, err := ParseToLogEntry(raw)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			wantOriginalIndex := i + 6
+			wantKey := fmt.Sprintf("key%d", wantOriginalIndex)
+			wantValue := strconv.Itoa(wantOriginalIndex)
+			if entry.Params[0] != wantKey || entry.Params[1] != wantValue {
+				t.Errorf("expected entry %d to be %s=%s, got params=%v", i, wantKey, wantValue, entry.Params)
+			}
+			if entry.Term != wantOriginalIndex {
+				t.Errorf("expected entry %d term %d, got %d", i, wantOriginalIndex, entry.Term)
+			}
+		}
+	})
+
+	t.Run("compact zero keeps all entries", func(t *testing.T) {
+		w := writeTestEntries(t)
+
+		if err := w.CompactPrefix(0); err != nil {
+			t.Fatal(err)
+		}
+
+		if got := w.LastLogIndex(); got != 10 {
+			t.Errorf("expected LastLogIndex 10 after compacting zero entries, got %d", got)
+		}
+
+		term, err := w.LastLogTerm()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if term != 10 {
+			t.Errorf("expected LastLogTerm 10, got %d", term)
+		}
+	})
+
+	t.Run("compact all entries leaves empty wal", func(t *testing.T) {
+		w := writeTestEntries(t)
+
+		if err := w.CompactPrefix(10); err != nil {
+			t.Fatal(err)
+		}
+
+		if got := w.LastLogIndex(); got != 0 {
+			t.Errorf("expected LastLogIndex 0 after compacting all entries, got %d", got)
+		}
+
+		term, err := w.LastLogTerm()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if term != 0 {
+			t.Errorf("expected LastLogTerm 0 after compacting all entries, got %d", term)
+		}
+
+		count := 0
+		if err := w.ForEach(func(_ int, _ string) error {
+			count++
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if count != 0 {
+			t.Errorf("expected no entries after compacting all entries, got %d", count)
+		}
+	})
+
+	t.Run("returns error when compacting beyond log length", func(t *testing.T) {
+		w := writeTestEntries(t)
+
+		if err := w.CompactPrefix(11); err == nil {
+			t.Fatal("expected error when compacting beyond log length")
+		}
+	})
 }
