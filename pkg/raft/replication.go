@@ -133,7 +133,7 @@ func (n *Node) handleEntry(req *transport.AppendEntriesRequest) (res *transport.
 
 	// 4. Check If theres extra entries in your log
 	if lastLogIndex > req.PrevLogIndex {
-		err := n.log.SpliceInPlace(req.PrevLogIndex - snapshotIndex)
+		err := n.log.TruncateAfter(req.PrevLogIndex - snapshotIndex)
 		if err != nil {
 			n.mutex.Unlock()
 			return Error(fmt.Errorf("truncate conflicting log entries: %w", err))
