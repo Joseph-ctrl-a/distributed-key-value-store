@@ -65,9 +65,12 @@ func (n *Node) restoreSnapshotFromDisk() error {
 		return fmt.Errorf("load snapshot: %w", err)
 	}
 
+	// Store the old snapshot index before overwriting it.
+	oldSnapshotIndex := snapshot.LastIncludedIndex
 	if err := n.restoreSnapshot(snapshot); err != nil {
 		return fmt.Errorf("restore snapshot: %w", err)
 	}
+	n.log.CompactPrefix(snapshot.LastIncludedIndex - oldSnapshotIndex)
 	return nil
 }
 
@@ -111,11 +114,11 @@ func (n *Node) shouldSnapshot() bool {
 // maybeSnapshot writes a snapshot when enough new entries have been applied.
 func (n *Node) maybeSnapshot() error {
 	n.mutex.RLock()
-	shouldSnapshot := n.lastApplied-n.lastSnapshotIndex >= snapshotThreshold
 	lastApplied := n.lastApplied
+	lastSnapshotIndex := n.lastSnapshotIndex
 	n.mutex.RUnlock()
 
-	if !shouldSnapshot {
+	if !n.shouldSnapshot() {
 		return nil
 	}
 
@@ -135,6 +138,9 @@ func (n *Node) maybeSnapshot() error {
 
 	if err != nil {
 		return fmt.Errorf("save snapshot: %w", err)
+	}
+	if err := n.log.CompactPrefix(lastApplied - lastSnapshotIndex); err != nil {
+		return err
 	}
 	n.mutex.Lock()
 	n.lastSnapshotIndex = snapshot.LastIncludedIndex
